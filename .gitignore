@@ -47,3 +47,8 @@ read_pkg.ps1
 read_snapshot.ps1
 read_snapshot2.ps1
 poll_status.ps1
+
+# Dev tools & local scripts
+.claude/
+*.ps1
+*.code-workspace
