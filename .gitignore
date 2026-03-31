@@ -1,0 +1,49 @@
+# dependencies
+node_modules
+
+# Next.js build output
+.next
+out
+
+# Python
+.venv
+__pycache__
+*.pyc
+*.pyo
+
+# Database
+neuro_kaizen.db
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# GitNexus
+.gitnexus
+
+# Misc
+.DS_Store
+*.log
+
+# Deploy credentials & scripts
+.appdeploy
+.appdeploy_app_id
+deploy_call.ps1
+deploy_payload_debug.json
+do_deploy.ps1
+do_deploy2.ps1
+redeploy_fix.ps1
+fix2.ps1
+fix_next.ps1
+fix_react.ps1
+kairos_deploy.ps1
+deploy_vite.ps1
+test_minimal.ps1
+check_raw.ps1
+check_status.ps1
+get_template.ps1
+read_pkg.ps1
+read_snapshot.ps1
+read_snapshot2.ps1
+poll_status.ps1

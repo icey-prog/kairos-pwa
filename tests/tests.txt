@@ -1,0 +1,67 @@
+# Tests
+
+## Test 1 - App loads and shows mood check-in [sanity]
+Viewport: mobile (375x667)
+Description: Verifies the MoodGate screen loads on first visit and all 5 energy levels are displayed.
+
+Steps:
+1. Navigate to the app
+2. Wait for page to fully load
+
+Expected: The header "Comment va le système ?" is visible. Five mood buttons are displayed (Épuisé, Fatigué, Correct, Éveillé, En feu).
+
+## Test 2 - Mood selection transitions to Arena
+Viewport: mobile (375x667)
+Description: Selecting a mood dismisses the MoodGate and shows the Arena dashboard.
+
+Steps:
+1. Navigate to the app
+2. Wait for MoodGate to be visible
+3. Click the "Éveillé" mood button
+
+Expected: The Arena screen is displayed with the header "Arena" and a tab bar showing "Timer" and "Planner".
+
+## Test 3 - Timer tab displays interleaving timer
+Viewport: mobile (375x667)
+Description: After mood check-in, the Timer tab shows the SVG ring and time display.
+
+Steps:
+1. Navigate to the app
+2. Click any mood button to enter Arena
+3. Ensure "Timer" tab is selected
+
+Expected: A circular ring timer is visible. Time reads "25:00". A "Focus · Code" or "Focus · Design" label is present.
+
+## Test 4 - Planner tab shows task creation form
+Viewport: mobile (375x667)
+Description: Switching to the Planner tab reveals the task creation form.
+
+Steps:
+1. Navigate to the app
+2. Click any mood button to enter Arena
+3. Click the "Planner" tab
+
+Expected: An input field with placeholder "Nouvelle tâche…" is visible. A minutes input and "Ajouter" button are present.
+
+## Test 5 - Timer tab is preserved when switching tabs
+Viewport: desktop
+Description: The timer state is not reset when switching between tabs.
+
+Steps:
+1. Navigate to the app
+2. Click any mood button to enter Arena
+3. Click the play button on the timer
+4. Switch to the Planner tab
+5. Switch back to the Timer tab
+
+Expected: The timer continues counting down or is paused at a value less than 25:00. State is preserved.
+
+## Test 6 - App is responsive on desktop
+Viewport: desktop (1280x800)
+Description: The UI renders correctly on desktop without layout breakage.
+
+Steps:
+1. Navigate to the app
+2. Click any mood button to enter Arena
+
+Expected: The content is centered and readable. No horizontal scroll or overlapping elements.

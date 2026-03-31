@@ -1,0 +1,57 @@
+Voici la documentation fondatrice de ton système, suivie du prompt chirurgical pour Claude.
+
+📄 DOCUMENTATION DU PROJET : "NEURO-KAIZEN PWA"
+1. Objectif de l'Application
+Créer un "exosquelette mental" sous forme de PWA gamifiée pour accélérer l'apprentissage de compétences complexes (code, design UI/UX pour Exxolab). Le système utilise le "Discipline Reset System" pour bloquer dynamiquement les tâches difficiles en cas de fatigue (via un tracker d'humeur) et récompenser l'effort cognitif (Rappel Actif, Méthode Feynman) par des points d'expérience (XP) convertibles en récompenses réelles.
+
+2. Stack Technique & Justificatif
+Frontend : React (Next.js) ou SvelteKit + TailwindCSS
+
+Justificatif : Standard industriel pour les interfaces riches et les PWA.
+
+Avantages : Écosystème de composants gamifiés massif, rendu rapide, expérience 100% native sur mobile, création de PWA out-of-the-box.
+
+Inconvénients : Peut s'avérer lourd si on abuse des bibliothèques externes.
+
+Backend : Python (FastAPI) + SQLite + SQLModel
+
+Justificatif : API asynchrone, typage strict, documentation auto-générée.
+
+Avantages : Empreinte mémoire microscopique (idéal pour un Raspberry Pi 4B), rapidité de développement extrême, intégration native avec Pydantic pour la validation des données.
+
+Inconvénients : Moins "batteries-included" que Laravel (pas de système d'authentification complexe natif, mais inutile pour un MVP solo).
+
+3. Schéma de Données & Relationnel
+Pour ce MVP (utilisateur unique), l'architecture est aplatie pour la vitesse.
+
+mood_logs (Registre quotidien de l'état cognitif)
+
+id (PK, Integer)
+
+score (Integer, 1-5)
+
+timestamp (DateTime, default: now)
+
+notes (String, nullable)
+
+xp_transactions (Le registre comptable de ton effort)
+
+id (PK, Integer)
+
+amount (Integer : positif = gain, négatif = achat)
+
+reason (String)
+
+timestamp (DateTime, default: now)
+
+rewards (Boutique de récompenses IRL)
+
+id (PK, Integer)
+
+title (String)
+
+cost (Integer)
+
+is_active (Boolean, default: True)
+
+Note relationnelle : Dans ce MVP à utilisateur unique, il n'y a pas de relations complexes (Foreign Keys) entre ces trois tables. Le solde d'XP est simplement la somme de la colonne amount de la table xp_transactions.
