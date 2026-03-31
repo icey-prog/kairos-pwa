@@ -1,1 +1,101 @@
 @import "tailwindcss";
+
+/* ─── Theme tokens (Tailwind v4 @theme generates utility classes) ─────────── */
+@theme {
+  --color-primary:             #007aff;
+  --color-primary-foreground:  #ffffff;
+  --color-secondary:           #f7f7f5;
+  --color-secondary-foreground:#111111;
+  --color-muted:               #f7f7f5;
+  --color-muted-foreground:    #8e8e93;
+  --color-border:              #e5e5e5;
+  --color-card:                #ffffff;
+  --color-card-foreground:     #111111;
+  --color-background:          #ffffff;
+  --color-foreground:          #111111;
+  --color-accent:              #f0f0f0;
+  --color-accent-foreground:   #111111;
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+html, body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ─── Glass mode: override all theme tokens ───────────────────────────────── */
+.glass-mode {
+  --color-primary:             #7c3aed;
+  --color-primary-foreground:  #ffffff;
+  --color-secondary:           rgba(255, 255, 255, 0.06);
+  --color-secondary-foreground:#f8f8f8;
+  --color-muted:               #1a1a1a;
+  --color-muted-foreground:    #888888;
+  --color-border:              rgba(255, 255, 255, 0.1);
+  --color-card:                rgba(255, 255, 255, 0.04);
+  --color-card-foreground:     #f8f8f8;
+  --color-background:          #0d0d0d;
+  --color-foreground:          #f8f8f8;
+  --color-accent:              rgba(255, 255, 255, 0.08);
+  --color-accent-foreground:   #f8f8f8;
+}
+
+/* ─── Glass utility classes ───────────────────────────────────────────────── */
+.glass {
+  background: var(--color-card);
+  border-radius: 1rem;
+  transition: background 0.3s ease;
+}
+
+.glass-mode .glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-strong {
+  background: var(--color-secondary);
+  border-radius: 1rem;
+  transition: background 0.3s ease;
+}
+
+.glass-mode .glass-strong {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Card hover lift ─────────────────────────────────────────────────────── */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.glass-mode .card-hover:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ─── XP / discipline gradients ──────────────────────────────────────────── */
+.gradient-xp      { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
+.gradient-coding  { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
+.gradient-exolab  { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
+.gradient-design  { background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%); }
+
+/* ─── Technique badge chips ───────────────────────────────────────────────── */
+.technique-spaced      { background: rgba(16,  185, 129, 0.15); color: #10b981; border-radius: 9999px; }
+.technique-interleaving{ background: rgba(245, 158,  11, 0.15); color: #f59e0b; border-radius: 9999px; }
+.technique-feynman     { background: rgba(239,  68,  68, 0.15); color: #ef4444; border-radius: 9999px; }
+.technique-recall      { background: rgba( 99, 102, 241, 0.15); color: #6366f1; border-radius: 9999px; }
+.technique-kaizen      { background: rgba( 20, 184, 166, 0.15); color: #14b8a6; border-radius: 9999px; }
+
+/* ─── Text gradients ──────────────────────────────────────────────────────── */
+.text-gradient-exolab {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

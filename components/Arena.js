@@ -12,10 +12,17 @@ import {
   ShoppingBag,
   Timer,
   CalendarDays,
+  CalendarCheck,
+  GraduationCap,
 } from 'lucide-react'
 import useStore from '../store/useStore'
 import InterleavingTimer from './InterleavingTimer'
 import DailyPlanner from './DailyPlanner'
+import Badges from './Badges'
+import WeeklyPlan from './WeeklyPlan'
+import SpacedRepetition from './SpacedRepetition'
+import FeynmanNotes from './FeynmanNotes'
+import ThemeToggle from './ThemeToggle'
 import { API, fetcher } from '../lib/api'
 
 const ALL_TASKS = [
@@ -58,13 +65,23 @@ const ALL_TASKS = [
 ]
 
 const TABS = [
-  { id: 'timer', label: 'Timer', icon: Timer },
-  { id: 'planner', label: 'Planner', icon: CalendarDays },
+  { id: 'timer',   label: 'Timer',    icon: Timer },
+  { id: 'planner', label: 'Plan',     icon: CalendarDays },
+  { id: 'learn',   label: 'Learn',    icon: GraduationCap },
+  { id: 'week',    label: 'Semaine',  icon: CalendarCheck },
+  { id: 'badges',  label: 'Badges',   icon: Trophy },
+]
+
+// Sub-tabs for the Learn section
+const LEARN_TABS = [
+  { id: 'sr',      label: 'Répétition espacée' },
+  { id: 'feynman', label: 'Notes Feynman' },
 ]
 
 export default function Arena() {
   const [completed, setCompleted] = useState(new Set())
   const [redeeming, setRedeeming] = useState(null)
+  const [learnTab, setLearnTab] = useState('sr')
   const currentMood = useStore((s) => s.currentMood)
   const setXpBalance = useStore((s) => s.setXpBalance)
   const activeTab = useStore((s) => s.activeTab)
@@ -104,7 +121,6 @@ export default function Arena() {
     }
   }
 
-  // Award XP when a focus session completes in the timer
   const handleSessionComplete = useCallback(async () => {
     try {
       await fetch(`${API}/xp`, {
@@ -117,50 +133,50 @@ export default function Arena() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--color-background)]">
 
       {/* Navbar */}
-      <div className="bg-white border-b border-gray-100 px-5 pt-14 pb-4">
+      <div className="bg-[var(--color-background)] border-b border-[var(--color-border)] px-5 pt-14 pb-4">
         <div className="max-w-lg mx-auto">
 
           {/* Title row */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest">
-                Neuro-Kaizen
+              <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest">
+                Kairos
               </p>
-              <h1 className="text-2xl font-bold text-[#111111] tracking-tight mt-0.5">
+              <h1 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight mt-0.5">
                 Arena
               </h1>
             </div>
 
             {/* XP Balance */}
-            <div className="flex items-center gap-1.5 bg-[#007AFF]/10 px-4 py-2.5 rounded-xl">
-              <Zap size={13} className="text-[#007AFF]" strokeWidth={2.5} fill="#007AFF" />
-              <span className="text-[#007AFF] font-bold text-[18px] tabular-nums leading-none">
+            <div className="flex items-center gap-1.5 bg-[var(--color-primary)]/10 px-4 py-2.5 rounded-xl">
+              <Zap size={13} className="text-[var(--color-primary)]" strokeWidth={2.5} />
+              <span className="text-[var(--color-primary)] font-bold text-[18px] tabular-nums leading-none">
                 {xpBalance.toLocaleString()}
               </span>
-              <span className="text-[#007AFF]/60 text-xs font-semibold">XP</span>
+              <span className="text-[var(--color-primary)]/60 text-xs font-semibold">XP</span>
             </div>
           </div>
 
           {/* Segmented Control */}
-          <div className="flex gap-1 bg-[#F7F7F5] rounded-xl p-1">
+          <div className="flex gap-1 bg-[var(--color-secondary)] rounded-xl p-1 overflow-x-auto">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
                 className={`
-                  flex-1 flex items-center justify-center gap-2 py-2 rounded-lg
-                  text-sm font-semibold transition-all duration-200
+                  flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg
+                  text-xs font-semibold transition-all duration-200 whitespace-nowrap
                   active:scale-[0.97] active:opacity-70
                   ${activeTab === id
-                    ? 'bg-white text-[#111111] shadow-sm'
-                    : 'text-[#8E8E93]'
+                    ? 'bg-[var(--color-card)] text-[var(--color-foreground)] shadow-sm'
+                    : 'text-[var(--color-muted-foreground)]'
                   }
                 `}
               >
-                <Icon size={14} strokeWidth={activeTab === id ? 2.5 : 2} />
+                <Icon size={13} strokeWidth={activeTab === id ? 2.5 : 2} />
                 {label}
               </button>
             ))}
@@ -169,13 +185,10 @@ export default function Arena() {
         </div>
       </div>
 
-      {/* Views — both mounted, inactive is hidden to preserve timer state */}
-
-      {/* Timer tab */}
+      {/* ── Timer tab ─────────────────────────────────────────────────────── */}
       <div className={activeTab === 'timer' ? '' : 'hidden'}>
         <div className="max-w-lg mx-auto px-5">
 
-          {/* Mood restriction banner */}
           {isRestricted && (
             <div className="mt-4 bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
@@ -185,17 +198,15 @@ export default function Arena() {
             </div>
           )}
 
-          {/* Timer */}
-          <div className="bg-[#F7F7F5] rounded-2xl mt-4 mb-6">
+          <div className="bg-[var(--color-secondary)] rounded-2xl mt-4 mb-6">
             <InterleavingTimer onSessionComplete={handleSessionComplete} />
           </div>
 
-          {/* XP Tasks */}
           <section className="mb-6">
-            <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest px-1 mb-3">
+            <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-3">
               Protocole du jour
             </p>
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden">
               {tasks.map((task, i) => {
                 const Icon = task.icon
                 const isDone = completed.has(task.id)
@@ -207,30 +218,30 @@ export default function Arena() {
                     className={`
                       w-full flex items-center gap-4 px-5 min-h-[68px] text-left
                       transition-all duration-150 active:scale-[0.99] active:opacity-70
-                      ${i < tasks.length - 1 ? 'border-b border-gray-50' : ''}
-                      ${isDone ? 'opacity-50 cursor-default' : 'hover:bg-gray-50/60'}
+                      ${i < tasks.length - 1 ? 'border-b border-[var(--color-border)]/60' : ''}
+                      ${isDone ? 'opacity-50 cursor-default' : 'hover:bg-[var(--color-secondary)]/60'}
                     `}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-green-50' : 'bg-[#F7F7F5]'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-green-50' : 'bg-[var(--color-secondary)]'}`}>
                       {isDone
                         ? <CheckCircle2 size={18} strokeWidth={2} className="text-green-500" />
-                        : <Icon size={18} strokeWidth={1.75} className="text-[#111111]" />
+                        : <Icon size={18} strokeWidth={1.75} className="text-[var(--color-foreground)]" />
                       }
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className={`text-[15px] font-semibold ${isDone ? 'line-through text-[#8E8E93]' : 'text-[#111111]'}`}>
+                        <p className={`text-[15px] font-semibold ${isDone ? 'line-through text-[var(--color-muted-foreground)]' : 'text-[var(--color-foreground)]'}`}>
                           {task.title}
                         </p>
-                        <span className="text-[10px] font-semibold text-[#8E8E93] bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                        <span className="text-[10px] font-semibold text-[var(--color-muted-foreground)] bg-[var(--color-secondary)] px-2 py-0.5 rounded-full uppercase tracking-wide">
                           {task.tag}
                         </span>
                       </div>
-                      <p className="text-xs text-[#8E8E93] mt-0.5 truncate">{task.description}</p>
+                      <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5 truncate">{task.description}</p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <span className="text-sm font-bold text-[#007AFF]">+{task.xp}</span>
-                      <ChevronRight size={14} strokeWidth={2} className="text-gray-300" />
+                      <span className="text-sm font-bold text-[var(--color-primary)]">+{task.xp}</span>
+                      <ChevronRight size={14} strokeWidth={2} className="text-[var(--color-border)]" />
                     </div>
                   </button>
                 )
@@ -238,13 +249,12 @@ export default function Arena() {
             </div>
           </section>
 
-          {/* Rewards */}
           {rewards && rewards.length > 0 && (
             <section className="pb-20">
-              <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest px-1 mb-3">
+              <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-3">
                 Boutique
               </p>
-              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden">
                 {rewards.map((reward, i) => {
                   const canAfford = xpBalance >= reward.cost
                   const isRedeeming = redeeming === reward.id
@@ -256,22 +266,22 @@ export default function Arena() {
                       className={`
                         w-full flex items-center gap-4 px-5 min-h-[68px] text-left
                         transition-all duration-150 active:scale-[0.99] active:opacity-70
-                        ${i < rewards.length - 1 ? 'border-b border-gray-50' : ''}
-                        ${canAfford && !redeeming ? 'hover:bg-gray-50/60' : 'opacity-50 cursor-default'}
+                        ${i < rewards.length - 1 ? 'border-b border-[var(--color-border)]/60' : ''}
+                        ${canAfford && !redeeming ? 'hover:bg-[var(--color-secondary)]/60' : 'opacity-50 cursor-default'}
                       `}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-[#007AFF]/10 flex items-center justify-center flex-shrink-0">
-                        <ShoppingBag size={18} strokeWidth={1.75} className="text-[#007AFF]" />
+                      <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
+                        <ShoppingBag size={18} strokeWidth={1.75} className="text-[var(--color-primary)]" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-semibold text-[#111111]">{reward.title}</p>
-                        <p className="text-xs text-[#8E8E93] mt-0.5">{reward.cost.toLocaleString()} XP</p>
+                        <p className="text-[15px] font-semibold text-[var(--color-foreground)]">{reward.title}</p>
+                        <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">{reward.cost.toLocaleString()} XP</p>
                       </div>
                       <div className={`
                         px-4 py-2 rounded-xl text-xs font-semibold flex-shrink-0
-                        ${isRedeeming ? 'bg-gray-100 text-gray-400'
-                          : canAfford ? 'bg-[#007AFF] text-white'
-                          : 'bg-gray-100 text-[#8E8E93]'}
+                        ${isRedeeming ? 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'
+                          : canAfford ? 'bg-[var(--color-primary)] text-white'
+                          : 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'}
                       `}>
                         {isRedeeming ? '···' : canAfford ? 'Racheter' : 'Insuffisant'}
                       </div>
@@ -280,9 +290,9 @@ export default function Arena() {
                 })}
               </div>
               <div className="flex items-center justify-center gap-2 mt-4">
-                <Trophy size={12} strokeWidth={1.75} className="text-[#8E8E93]" />
-                <p className="text-xs text-[#8E8E93]">
-                  Solde : <span className="font-semibold text-[#007AFF]">{xpBalance.toLocaleString()} XP</span>
+                <Trophy size={12} strokeWidth={1.75} className="text-[var(--color-muted-foreground)]" />
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  Solde : <span className="font-semibold text-[var(--color-primary)]">{xpBalance.toLocaleString()} XP</span>
                 </p>
               </div>
             </section>
@@ -291,10 +301,57 @@ export default function Arena() {
         </div>
       </div>
 
-      {/* Planner tab — mounted but hidden when inactive, preserving timer state */}
+      {/* ── Planner tab ───────────────────────────────────────────────────── */}
       <div className={activeTab === 'planner' ? '' : 'hidden'}>
         <DailyPlanner embedded />
       </div>
+
+      {/* ── Learn tab ─────────────────────────────────────────────────────── */}
+      <div className={activeTab === 'learn' ? '' : 'hidden'}>
+        <div className="max-w-lg mx-auto">
+          {/* Learn sub-tabs */}
+          <div className="flex gap-1 mx-5 mt-4 bg-[var(--color-secondary)] rounded-xl p-1">
+            {LEARN_TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setLearnTab(id)}
+                className={`
+                  flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200
+                  ${learnTab === id
+                    ? 'bg-[var(--color-card)] text-[var(--color-foreground)] shadow-sm'
+                    : 'text-[var(--color-muted-foreground)]'
+                  }
+                `}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className={learnTab === 'sr' ? '' : 'hidden'}>
+            <SpacedRepetition />
+          </div>
+          <div className={learnTab === 'feynman' ? '' : 'hidden'}>
+            <FeynmanNotes />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Week tab ──────────────────────────────────────────────────────── */}
+      <div className={activeTab === 'week' ? '' : 'hidden'}>
+        <div className="max-w-2xl mx-auto">
+          <WeeklyPlan />
+        </div>
+      </div>
+
+      {/* ── Badges tab ────────────────────────────────────────────────────── */}
+      <div className={activeTab === 'badges' ? '' : 'hidden'}>
+        <div className="max-w-lg mx-auto">
+          <Badges />
+        </div>
+      </div>
+
+      {/* Theme toggle — fixed bottom right */}
+      <ThemeToggle />
 
     </div>
   )
