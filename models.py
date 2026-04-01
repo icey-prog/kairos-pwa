@@ -60,3 +60,57 @@ class TaskCreate(SQLModel):
 
 class AddTimePayload(SQLModel):
     minutes: int = Field(ge=1)
+
+
+# --- FEYNMAN NOTES ---
+
+class FeynmanNote(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    discipline: str
+    topic: str
+    simple_explanation: str
+    analogies: Optional[str] = None
+    gaps: Optional[str] = None
+    refined_explanation: Optional[str] = None
+    mastery_level: int = Field(default=0, ge=0, le=100)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class FeynmanNoteCreate(SQLModel):
+    discipline: str
+    topic: str
+    simple_explanation: str
+    analogies: Optional[str] = None
+    gaps: Optional[str] = None
+    refined_explanation: Optional[str] = None
+    mastery_level: int = 0
+
+
+# --- SPACED REPETITION (SM-2) ---
+
+class SpacedCard(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    discipline: str
+    front: str
+    back: str
+    interval: int = Field(default=0)
+    repetition: int = Field(default=0)
+    easiness_factor: float = Field(default=2.5)
+    next_review_date: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SpacedCardCreate(SQLModel):
+    discipline: str
+    front: str
+    back: str
+    interval: int = 0
+    repetition: int = 0
+    easiness_factor: float = 2.5
+    next_review_date: Optional[datetime] = None
+
+
+class SpacedCardUpdate(SQLModel):
+    interval: int
+    repetition: int
+    easiness_factor: float
+    next_review_date: datetime

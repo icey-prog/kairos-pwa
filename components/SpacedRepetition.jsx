@@ -4,7 +4,8 @@ import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle, AlertCircle,
   Calendar, TrendingUp, Code2, Palette, BookOpen, RotateCcw,
 } from 'lucide-react'
-import { differenceInDays } from 'date-fns'
+import { differenceInDays, parseISO } from 'date-fns'
+import useSWR, { mutate } from 'swr'
 import {
   Card, CardContent, CardHeader, CardTitle,
   Button, Textarea, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -12,39 +13,24 @@ import {
 } from '../lib/ui'
 import { cn } from '../lib/utils'
 import { DISCIPLINE_CONFIG } from '../lib/types'
+import { API, fetcher } from '../lib/api'
 
 // ─── SM-2 algorithm ──────────────────────────────────────────────────────────
 function sm2(item, quality) {
-  let { easeFactor, repetitions, interval } = item
+  let { easiness_factor, repetition, interval } = item
   if (quality >= 3) {
-    if (repetitions === 0) interval = 1
-    else if (repetitions === 1) interval = 6
-    else interval = Math.round(interval * easeFactor)
-    repetitions++
-    easeFactor = Math.max(1.3, easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+    if (repetition === 0) interval = 1
+    else if (repetition === 1) interval = 6
+    else interval = Math.round(interval * easiness_factor)
+    repetition++
+    easiness_factor = Math.max(1.3, easiness_factor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
   } else {
-    repetitions = 0
+    repetition = 0
     interval = 1
   }
-  const nextReview = new Date()
-  nextReview.setDate(nextReview.getDate() + interval)
-  return { ...item, easeFactor, repetitions, interval, nextReview, lastReview: new Date() }
-}
-
-function loadItems() {
-  try {
-    return JSON.parse(localStorage.getItem('sr-items') || '[]').map((item) => ({
-      ...item,
-      nextReview: new Date(item.nextReview),
-      lastReview: item.lastReview ? new Date(item.lastReview) : undefined,
-    }))
-  } catch {
-    return []
-  }
-}
-
-function saveItems(items) {
-  localStorage.setItem('sr-items', JSON.stringify(items))
+  const nextReviewDate = new Date()
+  nextReviewDate.setDate(nextReviewDate.getDate() + interval)
+  return { ...item, easiness_factor, repetition, interval, next_review_date: nextReviewDate }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -66,35 +52,41 @@ const qualityLabels = [
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function SpacedRepetition() {
-  const [items, setItems] = useState(loadItems)
+  const { data: rawItems } = useSWR(`${API}/spaced-cards`, fetcher, { refreshInterval: 10000 })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
   const [newItem, setNewItem] = useState({ content: '', discipline: '' })
 
+  const items = (rawItems || []).map(i => ({ ...i, next_review_date: parseISO(i.next_review_date) }))
   const today = new Date()
-  const dueToday = items.filter((item) => differenceInDays(today, item.nextReview) >= 0)
+  const dueToday = items.filter((item) => differenceInDays(today, item.next_review_date) >= 0)
   const upcoming = items.filter((item) => {
-    const d = differenceInDays(item.nextReview, today)
+    const d = differenceInDays(item.next_review_date, today)
     return d > 0 && d <= 7
   })
-  const mastered = items.filter((item) => item.repetitions >= 5)
+  const mastered = items.filter((item) => item.repetition >= 5)
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!newItem.content || !newItem.discipline) return
-    const item = {
-      id: crypto.randomUUID(),
-      content: newItem.content,
+    const payload = {
+      front: newItem.content,
+      back: '',
       discipline: newItem.discipline,
       interval: 1,
-      repetitions: 0,
-      easeFactor: 2.5,
-      nextReview: new Date(),
+      repetition: 0,
+      easiness_factor: 2.5,
+      next_review_date: new Date().toISOString()
     }
-    const next = [...items, item]
-    setItems(next)
-    saveItems(next)
+    try {
+      await fetch(`${API}/spaced-cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      mutate(`${API}/spaced-cards`)
+    } catch (_) {}
     setNewItem({ content: '', discipline: '' })
     setIsDialogOpen(false)
   }
@@ -106,12 +98,23 @@ export default function SpacedRepetition() {
     setShowAnswer(false)
   }
 
-  const handleReview = (quality) => {
+  const handleReview = async (quality) => {
     const currentItem = dueToday[currentReviewIndex]
     const updated = sm2(currentItem, quality)
-    const next = items.map((i) => (i.id === currentItem.id ? updated : i))
-    setItems(next)
-    saveItems(next)
+    try {
+      await fetch(`${API}/spaced-cards/${currentItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interval: updated.interval,
+          repetition: updated.repetition,
+          easiness_factor: updated.easiness_factor,
+          next_review_date: updated.next_review_date.toISOString(),
+        }),
+      })
+      mutate(`${API}/spaced-cards`)
+    } catch (_) {}
+
     if (currentReviewIndex < dueToday.length - 1) {
       setCurrentReviewIndex((prev) => prev + 1)
       setShowAnswer(false)
@@ -162,7 +165,7 @@ export default function SpacedRepetition() {
               <span className="text-sm text-[var(--color-muted-foreground)]">{config.name}</span>
             </div>
             <div className="text-center py-6">
-              <h3 className="text-xl font-semibold text-[var(--color-foreground)] mb-4">{currentItem.content}</h3>
+              <h3 className="text-xl font-semibold text-[var(--color-foreground)] mb-4">{currentItem.front}</h3>
               {!showAnswer ? (
                 <Button onClick={() => setShowAnswer(true)} size="lg" className="gap-2">
                   <Brain className="w-5 h-5" />
@@ -196,11 +199,11 @@ export default function SpacedRepetition() {
             <div className="flex items-center justify-center gap-4 text-xs text-[var(--color-muted-foreground)]">
               <span className="flex items-center gap-1">
                 <RotateCcw className="w-3 h-3" />
-                {currentItem.repetitions} révisions
+                {currentItem.repetition} révisions
               </span>
               <span className="flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
-                Facilité: {currentItem.easeFactor.toFixed(1)}
+                Facilité: {currentItem.easiness_factor.toFixed(1)}
               </span>
             </div>
           </CardContent>
@@ -345,7 +348,7 @@ export default function SpacedRepetition() {
                     <Icon className="w-5 h-5" style={{ color: config.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-[var(--color-foreground)] truncate">{item.content}</p>
+                    <p className="font-medium text-sm text-[var(--color-foreground)] truncate">{item.front}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs">
                       <span className={cn('flex items-center gap-1', isDue ? 'text-rose-400' : 'text-[var(--color-muted-foreground)]')}>
                         <Clock className="w-3 h-3" />
@@ -353,7 +356,7 @@ export default function SpacedRepetition() {
                       </span>
                       <span className="text-[var(--color-muted-foreground)] flex items-center gap-1">
                         <RotateCcw className="w-3 h-3" />
-                        {item.repetitions}x
+                        {item.repetition}x
                       </span>
                     </div>
                   </div>

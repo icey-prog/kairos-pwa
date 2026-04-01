@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, Zap } from 'lucide-react'
 import { mutate } from 'swr'
 import useStore from '../store/useStore'
 import { API } from '../lib/api'
+import { toast } from 'sonner'
 
 const WORK_DURATION = 25 * 60
 const BREAK_DURATION = 5 * 60
@@ -50,6 +51,9 @@ export default function InterleavingTimer({ onSessionComplete }) {
       }
 
       setJustCompleted(true)
+      toast.success("Focus session completed! +50 XP", {
+        description: `Bien joué ! Tu as progressé dans ${currentSubject}.`,
+      })
       setTimeout(() => setJustCompleted(false), 2000)
       onSessionComplete?.()
       setSessionCount((c) => c + 1)

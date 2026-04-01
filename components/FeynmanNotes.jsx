@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Lightbulb, Plus, Search, BookOpen, Code2, Brain, Palette,
-  Star, Edit3, Sparkles, ChevronDown, ChevronUp,
+  Star, Edit3, Sparkles, ChevronDown, ChevronUp, XCircle,
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import useSWR, { mutate } from 'swr'
 import {
   Card, CardContent, Badge,
   Button, Input, Textarea,
@@ -14,21 +15,9 @@ import {
 } from '../lib/ui'
 import { cn } from '../lib/utils'
 import { DISCIPLINE_CONFIG } from '../lib/types'
+import { API, fetcher } from '../lib/api'
 
-function loadNotes() {
-  try {
-    return JSON.parse(localStorage.getItem('feynman-notes') || '[]').map((n) => ({
-      ...n,
-      createdAt: new Date(n.createdAt),
-    }))
-  } catch {
-    return []
-  }
-}
-
-function saveNotes(notes) {
-  localStorage.setItem('feynman-notes', JSON.stringify(notes))
-}
+// No localStorage loading anymore
 
 const getDisciplineIcon = (id) => {
   if (id === 'coding') return Code2
@@ -55,27 +44,53 @@ const EMPTY_NOTE = {
 }
 
 export default function FeynmanNotes() {
-  const [notes, setNotes] = useState(loadNotes)
+  const { data: rawNotes } = useSWR(`${API}/feynman`, fetcher, { refreshInterval: 10000 })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [expandedNote, setExpandedNote] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDiscipline, setSelectedDiscipline] = useState('all')
   const [newNote, setNewNote] = useState(EMPTY_NOTE)
 
-  const handleSubmit = () => {
+  const notes = (rawNotes || []).map((n) => ({
+    ...n,
+    concept: n.topic,
+    simpleExplanation: n.simple_explanation,
+    analogies: n.analogies ? JSON.parse(n.analogies) : [],
+    gaps: n.gaps ? JSON.parse(n.gaps) : [],
+    refinedExplanation: n.refined_explanation,
+    masteryLevel: n.mastery_level,
+    createdAt: parseISO(n.created_at),
+  }))
+
+  const handleSubmit = async () => {
     if (!newNote.discipline || !newNote.concept || !newNote.simpleExplanation) return
-    const note = {
-      id: crypto.randomUUID(),
-      ...newNote,
-      analogies: newNote.analogies.filter((a) => a.trim()),
-      gaps: newNote.gaps.filter((g) => g.trim()),
-      createdAt: new Date(),
+    const payload = {
+      discipline: newNote.discipline,
+      topic: newNote.concept,
+      simple_explanation: newNote.simpleExplanation,
+      analogies: JSON.stringify(newNote.analogies.filter((a) => a.trim())),
+      gaps: JSON.stringify(newNote.gaps.filter((g) => g.trim())),
+      refined_explanation: newNote.refinedExplanation,
+      mastery_level: newNote.masteryLevel,
     }
-    const next = [...notes, note]
-    setNotes(next)
-    saveNotes(next)
+    try {
+      await fetch(`${API}/feynman`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      mutate(`${API}/feynman`)
+    } catch (_) {}
     setNewNote(EMPTY_NOTE)
     setIsDialogOpen(false)
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Supprimer cette note ?')) return
+    try {
+      await fetch(`${API}/feynman/${id}`, { method: 'DELETE' })
+      mutate(`${API}/feynman`)
+    } catch (_) {}
   }
 
   const addAnalogy = () => setNewNote({ ...newNote, analogies: [...newNote.analogies, ''] })
@@ -334,9 +349,14 @@ export default function FeynmanNotes() {
                                 {note.masteryLevel}% maîtrisé
                               </Badge>
                             </div>
-                            <span className="text-[11px] text-[var(--color-muted-foreground)] flex-shrink-0">
-                              {format(note.createdAt, 'dd MMM', { locale: fr })}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-[var(--color-muted-foreground)] flex-shrink-0">
+                                {format(note.createdAt, 'dd MMM', { locale: fr })}
+                              </span>
+                              <Button variant="ghost" size="xs" onClick={() => handleDelete(note.id)} className="h-6 w-6 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10">
+                                <XCircle className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="mt-2 p-3 rounded-lg bg-[var(--color-secondary)]/50">
                             <p className="text-xs text-[var(--color-muted-foreground)] mb-1">Explication simple:</p>

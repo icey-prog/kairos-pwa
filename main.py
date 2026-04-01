@@ -7,10 +7,15 @@ from sqlmodel import Session, func, select
 from database import create_db_and_tables, get_session
 from models import (
     AddTimePayload,
+    FeynmanNote,
+    FeynmanNoteCreate,
     MoodLog,
     MoodLogCreate,
     Reward,
     RewardCreate,
+    SpacedCard,
+    SpacedCardCreate,
+    SpacedCardUpdate,
     Task,
     TaskCreate,
     XpTransaction,
@@ -144,3 +149,78 @@ def add_time_to_task(
     session.commit()
     session.refresh(task)
     return task
+
+
+# --- FEYNMAN NOTES ---
+
+@app.get("/api/feynman", response_model=List[FeynmanNote])
+def list_feynman_notes(session: Session = Depends(get_session)):
+    return session.exec(select(FeynmanNote)).all()
+
+
+@app.post("/api/feynman", response_model=FeynmanNote, status_code=201)
+def create_feynman_note(payload: FeynmanNoteCreate, session: Session = Depends(get_session)):
+    note = FeynmanNote.model_validate(payload)
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    return note
+
+
+@app.put("/api/feynman/{note_id}", response_model=FeynmanNote)
+def update_feynman_note(note_id: int, payload: FeynmanNoteCreate, session: Session = Depends(get_session)):
+    note = session.get(FeynmanNote, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    data = payload.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(note, key, value)
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    return note
+
+
+@app.delete("/api/feynman/{note_id}")
+def delete_feynman_note(note_id: int, session: Session = Depends(get_session)):
+    note = session.get(FeynmanNote, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    session.delete(note)
+    session.commit()
+    return {"success": True}
+
+
+# --- SPACED REPETITION ---
+
+@app.get("/api/spaced-cards", response_model=List[SpacedCard])
+def list_spaced_cards(due_only: bool = False, session: Session = Depends(get_session)):
+    query = select(SpacedCard)
+    if due_only:
+        query = query.where(SpacedCard.next_review_date <= datetime.utcnow())
+    return session.exec(query).all()
+
+
+@app.post("/api/spaced-cards", response_model=SpacedCard, status_code=201)
+def create_spaced_card(payload: SpacedCardCreate, session: Session = Depends(get_session)):
+    card = SpacedCard.model_validate(payload)
+    if not card.next_review_date:
+        card.next_review_date = datetime.utcnow()
+    session.add(card)
+    session.commit()
+    session.refresh(card)
+    return card
+
+
+@app.put("/api/spaced-cards/{card_id}", response_model=SpacedCard)
+def update_spaced_card(card_id: int, payload: SpacedCardUpdate, session: Session = Depends(get_session)):
+    card = session.get(SpacedCard, card_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    data = payload.model_dump()
+    for key, value in data.items():
+        setattr(card, key, value)
+    session.add(card)
+    session.commit()
+    session.refresh(card)
+    return card
