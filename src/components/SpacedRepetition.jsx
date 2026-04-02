@@ -102,7 +102,7 @@ export default function SpacedRepetition() {
     const currentItem = dueToday[currentReviewIndex]
     const updated = sm2(currentItem, quality)
     try {
-      await fetch(`${API}/spaced-cards/${currentItem.id}`, {
+      const response = await fetch(`${API}/spaced-cards/${currentItem.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,17 +112,20 @@ export default function SpacedRepetition() {
           next_review_date: updated.next_review_date.toISOString(),
         }),
       })
-      mutate(`${API}/spaced-cards`)
-    } catch (_) {}
 
-    if (currentReviewIndex < dueToday.length - 1) {
-      setCurrentReviewIndex((prev) => prev + 1)
-      setShowAnswer(false)
-    } else {
-      setIsReviewMode(false)
-      setCurrentReviewIndex(0)
-      setShowAnswer(false)
-    }
+      if (!response.ok) throw new Error('API update failed')
+
+      mutate(`${API}/spaced-cards`)
+
+      if (currentReviewIndex < dueToday.length - 1) {
+        setCurrentReviewIndex((prev) => prev + 1)
+        setShowAnswer(false)
+      } else {
+        setIsReviewMode(false)
+        setCurrentReviewIndex(0)
+        setShowAnswer(false)
+      }
+    } catch (_) {}
   }
 
   // ── Review mode UI ──────────────────────────────────────────────────────────
@@ -134,8 +137,9 @@ export default function SpacedRepetition() {
 
     return (
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ opacity: 0, scale: 0.96, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 260 }}
         className="min-h-[500px] flex flex-col items-center justify-center px-5 py-6"
       >
         <Card className="glass-strong border-0 w-full max-w-lg">
@@ -154,6 +158,7 @@ export default function SpacedRepetition() {
                 className="h-full bg-emerald-500"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
+                transition={{ type: 'spring', bounce: 0, duration: 0.6 }}
               />
             </div>
           </CardHeader>
@@ -173,8 +178,9 @@ export default function SpacedRepetition() {
                 </Button>
               ) : (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: 'spring', damping: 22, stiffness: 300 }}
                   className="space-y-3"
                 >
                   <p className="text-sm text-[var(--color-muted-foreground)]">Comment as-tu trouvé ?</p>
@@ -217,6 +223,7 @@ export default function SpacedRepetition() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 26, stiffness: 260 }}
       className="space-y-5 px-5 py-4 pb-24"
     >
       {/* Header */}
@@ -330,13 +337,14 @@ export default function SpacedRepetition() {
           {items.map((item) => {
             const Icon = getDisciplineIcon(item.discipline)
             const config = DISCIPLINE_CONFIG[item.discipline]
-            const isDue = differenceInDays(today, item.nextReview) >= 0
-            const daysUntil = differenceInDays(item.nextReview, today)
+            const isDue = differenceInDays(today, item.next_review_date) >= 0
+            const daysUntil = differenceInDays(item.next_review_date, today)
             return (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 260 }}
                 className={cn(
                   'glass rounded-xl p-4 border-0 card-hover',
                   isDue && 'ring-2 ring-rose-500/50',

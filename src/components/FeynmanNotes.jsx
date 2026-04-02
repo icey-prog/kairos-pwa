@@ -51,16 +51,29 @@ export default function FeynmanNotes() {
   const [selectedDiscipline, setSelectedDiscipline] = useState('all')
   const [newNote, setNewNote] = useState(EMPTY_NOTE)
 
-  const notes = (rawNotes || []).map((n) => ({
-    ...n,
-    concept: n.topic,
-    simpleExplanation: n.simple_explanation,
-    analogies: n.analogies ? JSON.parse(n.analogies) : [],
-    gaps: n.gaps ? JSON.parse(n.gaps) : [],
-    refinedExplanation: n.refined_explanation,
-    masteryLevel: n.mastery_level,
-    createdAt: parseISO(n.created_at),
-  }))
+  const notes = (rawNotes || []).map((n) => {
+    let analogies = []
+    let gaps = []
+    
+    try {
+      if (n.analogies) analogies = JSON.parse(n.analogies)
+    } catch (_) {}
+    
+    try {
+      if (n.gaps) gaps = JSON.parse(n.gaps)
+    } catch (_) {}
+
+    return {
+      ...n,
+      concept: n.topic,
+      simpleExplanation: n.simple_explanation,
+      analogies,
+      gaps,
+      refinedExplanation: n.refined_explanation,
+      masteryLevel: n.mastery_level,
+      createdAt: parseISO(n.created_at),
+    }
+  })
 
   const handleSubmit = async () => {
     if (!newNote.discipline || !newNote.concept || !newNote.simpleExplanation) return
@@ -113,6 +126,7 @@ export default function FeynmanNotes() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 26, stiffness: 260 }}
       className="space-y-5 px-5 py-4 pb-24"
     >
       {/* Header */}
@@ -328,9 +342,10 @@ export default function FeynmanNotes() {
               return (
                 <motion.div
                   key={note.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 20, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ type: 'spring', damping: 26, stiffness: 260 }}
                 >
                   <Card className="glass border-0 card-hover overflow-hidden">
                     <CardContent className="p-4">
@@ -369,6 +384,7 @@ export default function FeynmanNotes() {
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
+                                transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
                                 className="overflow-hidden"
                               >
                                 {note.analogies.length > 0 && (

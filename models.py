@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import Field, SQLModel
 
@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel
 class MoodLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     score: int = Field(ge=1, le=5)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     notes: Optional[str] = None
 
 
@@ -19,7 +19,7 @@ class XpTransaction(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     amount: int
     reason: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class XpTransactionCreate(SQLModel):
@@ -48,7 +48,7 @@ class Task(SQLModel, table=True):
     target_minutes: int = Field(default=90, ge=1)
     spent_minutes: int = Field(default=0, ge=0)
     reminder_time: Optional[datetime] = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TaskCreate(SQLModel):
@@ -73,7 +73,7 @@ class FeynmanNote(SQLModel, table=True):
     gaps: Optional[str] = None
     refined_explanation: Optional[str] = None
     mastery_level: int = Field(default=0, ge=0, le=100)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class FeynmanNoteCreate(SQLModel):
@@ -96,7 +96,7 @@ class SpacedCard(SQLModel, table=True):
     interval: int = Field(default=0)
     repetition: int = Field(default=0)
     easiness_factor: float = Field(default=2.5)
-    next_review_date: datetime = Field(default_factory=datetime.utcnow)
+    next_review_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class SpacedCardCreate(SQLModel):

@@ -1,5 +1,5 @@
 import useSWR, { mutate } from 'swr'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   Brain,
   BookOpen,
@@ -64,28 +64,38 @@ const ALL_TASKS = [
   },
 ]
 
-const TABS = [
-  { id: 'timer',   label: 'Timer',    icon: Timer },
-  { id: 'planner', label: 'Plan',     icon: CalendarDays },
-  { id: 'learn',   label: 'Learn',    icon: GraduationCap },
-  { id: 'week',    label: 'Semaine',  icon: CalendarCheck },
-  { id: 'badges',  label: 'Badges',   icon: Trophy },
-]
-
-// Sub-tabs for the Learn section
-const LEARN_TABS = [
-  { id: 'sr',      label: 'Répétition espacée' },
-  { id: 'feynman', label: 'Notes Feynman' },
-]
+const SUB_TABS = {
+  focus: [
+    { id: 'timer',   label: 'Chrono',    icon: Timer },
+    { id: 'planner', label: 'Quêtes',    icon: CalendarDays }
+  ],
+  learn: [
+    { id: 'sr',      label: 'Flashcards', icon: BookOpen },
+    { id: 'feynman', label: 'Feynman',    icon: Pencil }
+  ],
+  dashboard: [
+    { id: 'week',    label: 'Progression',icon: TrendingUp },
+    { id: 'badges',  label: 'Hauts Faits', icon: Trophy }
+  ]
+}
 
 export default function Arena() {
   const [completed, setCompleted] = useState(new Set())
   const [redeeming, setRedeeming] = useState(null)
-  const [learnTab, setLearnTab] = useState('sr')
+  
   const currentMood = useStore((s) => s.currentMood)
   const setXpBalance = useStore((s) => s.setXpBalance)
+  
+  const mainTab = useStore((s) => s.mainTab)
   const activeTab = useStore((s) => s.activeTab)
   const setActiveTab = useStore((s) => s.setActiveTab)
+
+  useEffect(() => {
+    const validTabs = SUB_TABS[mainTab]?.map(t => t.id) || [];
+    if (validTabs.length > 0 && !validTabs.includes(activeTab)) {
+      setActiveTab(validTabs[0]);
+    }
+  }, [mainTab, activeTab, setActiveTab])
 
   const { data: xpData } = useSWR(`${API}/xp/balance`, fetcher, {
     refreshInterval: 4000,
@@ -162,7 +172,7 @@ export default function Arena() {
 
           {/* Segmented Control */}
           <div className="flex gap-1 bg-[var(--color-secondary)] rounded-xl p-1 overflow-x-auto">
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {SUB_TABS[mainTab]?.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -306,33 +316,17 @@ export default function Arena() {
         <DailyPlanner embedded />
       </div>
 
-      {/* ── Learn tab ─────────────────────────────────────────────────────── */}
-      <div className={activeTab === 'learn' ? '' : 'hidden'}>
-        <div className="max-w-lg mx-auto">
-          {/* Learn sub-tabs */}
-          <div className="flex gap-1 mx-5 mt-4 bg-[var(--color-secondary)] rounded-xl p-1">
-            {LEARN_TABS.map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => setLearnTab(id)}
-                className={`
-                  flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200
-                  ${learnTab === id
-                    ? 'bg-[var(--color-card)] text-[var(--color-foreground)] shadow-sm'
-                    : 'text-[var(--color-muted-foreground)]'
-                  }
-                `}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className={learnTab === 'sr' ? '' : 'hidden'}>
-            <SpacedRepetition />
-          </div>
-          <div className={learnTab === 'feynman' ? '' : 'hidden'}>
-            <FeynmanNotes />
-          </div>
+      {/* ── SR tab ────────────────────────────────────────────────────────── */}
+      <div className={activeTab === 'sr' ? '' : 'hidden'}>
+        <div className="max-w-lg mx-auto pt-4">
+          <SpacedRepetition />
+        </div>
+      </div>
+
+      {/* ── Feynman tab ───────────────────────────────────────────────────── */}
+      <div className={activeTab === 'feynman' ? '' : 'hidden'}>
+        <div className="max-w-lg mx-auto pt-4">
+          <FeynmanNotes />
         </div>
       </div>
 

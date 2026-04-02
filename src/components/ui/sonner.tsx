@@ -1,11 +1,12 @@
 import {
-  CircleCheckIcon,
-  InfoIcon,
-  Loader2Icon,
-  OctagonXIcon,
-  TriangleAlertIcon,
+  CheckCircle2 as CircleCheckIcon,
+  Info as InfoIcon,
+  Loader2 as Loader2Icon,
+  AlertOctagon as OctagonXIcon,
+  AlertTriangle as TriangleAlertIcon,
 } from "lucide-react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import * as React from "react"
 import { useEffect, useState } from "react"
 
 const Toaster = ({ ...props }: ToasterProps) => {

@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, func, select
 
 from database import create_db_and_tables, get_session
@@ -30,6 +32,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Neuro-Kaizen API", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # --- MOOD ---
@@ -197,7 +206,7 @@ def delete_feynman_note(note_id: int, session: Session = Depends(get_session)):
 def list_spaced_cards(due_only: bool = False, session: Session = Depends(get_session)):
     query = select(SpacedCard)
     if due_only:
-        query = query.where(SpacedCard.next_review_date <= datetime.utcnow())
+        query = query.where(SpacedCard.next_review_date <= datetime.now(timezone.utc))
     return session.exec(query).all()
 
 
@@ -205,7 +214,7 @@ def list_spaced_cards(due_only: bool = False, session: Session = Depends(get_ses
 def create_spaced_card(payload: SpacedCardCreate, session: Session = Depends(get_session)):
     card = SpacedCard.model_validate(payload)
     if not card.next_review_date:
-        card.next_review_date = datetime.utcnow()
+        card.next_review_date = datetime.now(timezone.utc)
     session.add(card)
     session.commit()
     session.refresh(card)

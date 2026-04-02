@@ -1,7 +1,8 @@
 # dependencies
 node_modules
 
-# Next.js build output
+# Build output
+dist/
 .next
 out
 
@@ -25,6 +26,8 @@ neuro_kaizen.db
 # Misc
 .DS_Store
 *.log
+*.txt
+skills/
 
 # Deploy credentials & scripts
 .appdeploy

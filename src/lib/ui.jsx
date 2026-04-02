@@ -34,10 +34,10 @@ const btnVariants = {
 }
 
 const btnSizes = {
-  default: 'px-4 py-2 text-sm h-9',
-  sm: 'px-3 py-1.5 text-xs h-7',
-  lg: 'px-6 py-3 text-base h-11',
-  icon: 'p-2 h-9 w-9',
+  default: 'px-4 py-2 text-sm min-h-[44px]',
+  sm: 'px-3 py-1.5 text-xs min-h-[44px]',
+  lg: 'px-6 py-3 text-base min-h-[48px]',
+  icon: 'p-2 min-h-[44px] min-w-[44px]',
 }
 
 export function Button({ variant = 'default', size = 'default', className, children, ...props }) {
@@ -64,7 +64,7 @@ export function Input({ className, ...props }) {
     <input
       className={cn(
         'w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-secondary)]',
-        'px-3 py-2 text-sm text-[var(--color-foreground)]',
+        'px-3 py-2 text-base text-[var(--color-foreground)] min-h-[44px]',
         'placeholder:text-[var(--color-muted-foreground)]',
         'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30',
         className,
@@ -81,7 +81,7 @@ export function Textarea({ className, ...props }) {
     <textarea
       className={cn(
         'w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-secondary)]',
-        'px-3 py-2 text-sm text-[var(--color-foreground)] resize-none',
+        'px-3 py-3 text-base text-[var(--color-foreground)] resize-none min-h-[44px]',
         'placeholder:text-[var(--color-muted-foreground)]',
         'focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30',
         className,
@@ -216,7 +216,7 @@ export function SelectTrigger({ children, className }) {
       className={cn(
         'w-full flex items-center justify-between gap-2 rounded-xl',
         'border border-[var(--color-border)] bg-[var(--color-secondary)]',
-        'px-3 py-2 text-sm text-left focus:outline-none',
+        'px-3 py-2 text-base text-left focus:outline-none min-h-[44px]',
         className,
       )}
     >
@@ -257,7 +257,7 @@ export function SelectItem({ value: itemValue, children }) {
   return (
     <div
       className={cn(
-        'px-3 py-2 text-sm cursor-pointer transition-colors flex items-center gap-2',
+        'px-3 py-2 text-base cursor-pointer transition-colors flex items-center gap-2 min-h-[44px]',
         'hover:bg-[var(--color-secondary)] text-[var(--color-foreground)]',
         value === itemValue && 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium',
       )}

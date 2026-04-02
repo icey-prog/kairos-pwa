@@ -12,11 +12,14 @@ import { cn } from '../lib/utils'
 import { API, fetcher } from '../lib/api'
 import { isCompleted, getProgress } from '../lib/taskBridge'
 
-// Assign each task a stable weekday (Mon–Sun) based on its id hash
-function taskDayIndex(task) {
-  let hash = 0
-  for (let i = 0; i < task.id.length; i++) hash = (hash * 31 + task.id.charCodeAt(i)) | 0
-  return ((hash % 7) + 7) % 7  // 0=Mon … 6=Sun
+// Get category dot color based on task title semantic
+function getCategoryColor(title) {
+  const t = title.toLowerCase()
+  if (t.includes('code') || t.includes('dev') || t.includes('bug') || t.includes('arch')) return 'bg-blue-400'
+  if (t.includes('sport') || t.includes('cardio') || t.includes('gym')) return 'bg-orange-400'
+  if (t.includes('review') || t.includes('read') || t.includes('learn')) return 'bg-purple-400'
+  if (t.includes('feynman') || t.includes('flash') || t.includes('card')) return 'bg-emerald-400'
+  return 'bg-[var(--color-primary)]' // default
 }
 
 export default function WeeklyPlan() {
@@ -28,25 +31,38 @@ export default function WeeklyPlan() {
 
   const { data: tasks = [] } = useSWR(`${API}/tasks`, fetcher, { refreshInterval: 5000 })
 
-  // Mark a task complete by setting spent = target via PATCH
+  // Mark a task complete by adding the remaining minutes via the existing endpoint
   const completeTask = async (task) => {
     if (isCompleted(task)) return
-    await fetch(`${API}/tasks/${task.id}`, {
+    const remaining = task.target_minutes - task.spent_minutes
+    if (remaining <= 0) return
+    await fetch(`${API}/tasks/${task.id}/add_time`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spent_minutes: task.target_minutes }),
+      body: JSON.stringify({ minutes: remaining }),
     })
+    // Synchro avec l'économie: Gain d'XP pour avoir terminé la tâche
+    await fetch(`${API}/xp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: 15, reason: task.title }),
+    })
+
     mutate(`${API}/tasks`)
+    mutate(`${API}/xp/balance`)
   }
 
-  // Group tasks by assigned weekday
-  const tasksByDay = weekDays.map((day, idx) => ({
+  // Group tasks by creation date matching the weekday
+  const tasksByDay = weekDays.map((day) => ({
     date: day,
     dayName: format(day, 'EEE', { locale: fr }),
     dayNumber: format(day, 'd'),
     month: format(day, 'MMM', { locale: fr }),
     isToday: isSameDay(day, new Date()),
-    tasks: tasks.filter((t) => taskDayIndex(t) === idx),
+    tasks: tasks.filter((t) => {
+      const taskDate = t.created_at ? new Date(t.created_at) : new Date()
+      return isSameDay(taskDate, day)
+    }),
   }))
 
   const completedCount = tasks.filter(isCompleted).length
@@ -163,10 +179,13 @@ export default function WeeklyPlan() {
                       )}
                       onClick={() => completeTask(task)}
                     >
-                      <p className={cn('font-medium truncate text-[var(--color-foreground)]', done && 'line-through opacity-60')}>
-                        {task.title}
-                      </p>
-                      <div className="flex items-center gap-1 mt-1">
+                      <div className="flex items-center gap-2">
+                        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", getCategoryColor(task.title))} />
+                        <p className={cn('font-medium truncate text-[var(--color-foreground)]', done && 'line-through opacity-60')}>
+                          {task.title}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1 pl-4">
                         <Clock className="w-2.5 h-2.5 text-[var(--color-muted-foreground)]" />
                         <span className="text-[9px] text-[var(--color-muted-foreground)]">{task.target_minutes}min</span>
                         {!done && (

@@ -1,19 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { 
-  LayoutGrid, 
-  Sparkles, 
-  Brain, 
-  Search, 
-  Zap, 
-  Plus, 
-  Timer, 
-  CalendarDays, 
-  Trophy,
-  Moon,
-  Sun
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Sparkles, Brain, Zap, Plus, Timer, TrendingUp, CalendarDays, Trophy } from 'lucide-react'
 import useStore from '../store/useStore'
 import { cn } from '../lib/utils'
+import { API } from '../lib/api'
 import {
   CommandDialog,
   CommandInput,
@@ -24,7 +13,8 @@ import {
 } from './ui/command'
 
 export default function FloatingNav() {
-  const activeTab = useStore((s) => s.activeTab)
+  const mainTab = useStore((s) => s.mainTab)
+  const setMainTab = useStore((s) => s.setMainTab)
   const setActiveTab = useStore((s) => s.setActiveTab)
   const [open, setOpen] = useState(false)
 
@@ -41,9 +31,10 @@ export default function FloatingNav() {
   }, [])
 
   const navItems = [
-    { id: 'planner', label: 'Planner', icon: CalendarDays },
-    { id: 'search',  label: 'Search',  icon: Sparkles, center: true },
-    { id: 'learn',   label: 'Learn',   icon: Brain },
+    { id: 'focus',     label: 'Focus',     icon: Timer },
+    { id: 'search',    label: 'Search',    icon: Sparkles, center: true },
+    { id: 'learn',     label: 'Learn',     icon: Brain },
+    { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
   ]
 
   return (
@@ -59,7 +50,7 @@ export default function FloatingNav() {
         )}>
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = activeTab === item.id || (item.center && open)
+            const isActive = mainTab === item.id || (item.center && open)
             
             if (item.center) {
               return (
@@ -81,7 +72,7 @@ export default function FloatingNav() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => setMainTab(item.id)}
                 className={cn(
                   "relative w-14 h-12 flex items-center justify-center rounded-full transition-all duration-200",
                   "hover:scale-105 active:scale-95",
@@ -103,29 +94,36 @@ export default function FloatingNav() {
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Navigation">
-            <CommandItem onSelect={() => { setActiveTab('timer'); setOpen(false); }}>
+            <CommandItem onSelect={() => { setMainTab('focus'); setActiveTab('timer'); setOpen(false); }}>
               <Timer className="mr-2 h-4 w-4" />
               <span>Go to Focus Timer</span>
             </CommandItem>
-            <CommandItem onSelect={() => { setActiveTab('planner'); setOpen(false); }}>
+            <CommandItem onSelect={() => { setMainTab('focus'); setActiveTab('planner'); setOpen(false); }}>
               <CalendarDays className="mr-2 h-4 w-4" />
               <span>Open Daily Planner</span>
             </CommandItem>
-            <CommandItem onSelect={() => { setActiveTab('learn'); setOpen(false); }}>
+            <CommandItem onSelect={() => { setMainTab('learn'); setActiveTab('sr'); setOpen(false); }}>
               <Brain className="mr-2 h-4 w-4" />
               <span>Start Learning Session</span>
             </CommandItem>
-            <CommandItem onSelect={() => { setActiveTab('badges'); setOpen(false); }}>
+            <CommandItem onSelect={() => { setMainTab('dashboard'); setActiveTab('badges'); setOpen(false); }}>
               <Trophy className="mr-2 h-4 w-4" />
               <span>View My Badges</span>
             </CommandItem>
           </CommandGroup>
           <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => { /* Toggle theme logic here or handled by separate toggle */ setOpen(false); }}>
+            <CommandItem onSelect={() => {
+              fetch(`${API}/xp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: 10, reason: 'Quick XP via command palette' }),
+              }).catch(() => {})
+              setOpen(false)
+            }}>
               <Zap className="mr-2 h-4 w-4 text-amber-400" />
-              <span>Log Quick XP</span>
+              <span>Log Quick XP (+10)</span>
             </CommandItem>
-            <CommandItem onSelect={() => { setOpen(false); }}>
+            <CommandItem onSelect={() => { setMainTab('focus'); setActiveTab('planner'); setOpen(false); }}>
               <Plus className="mr-2 h-4 w-4" />
               <span>Create New Task</span>
             </CommandItem>

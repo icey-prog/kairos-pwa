@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import useStore from '../store/useStore'
-import MoodGate from '../components/MoodGate'
-import Arena from '../components/Arena'
+import useStore from './store/useStore'
+import MoodGate from './components/MoodGate'
+import Arena from './components/Arena'
 import { Toaster } from './components/ui/sonner'
 import FloatingNav from './components/FloatingNav'
 
