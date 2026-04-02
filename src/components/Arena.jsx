@@ -150,14 +150,19 @@ export default function Arena() {
         <div className="max-w-lg mx-auto">
 
           {/* Title row */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest">
-                Kairos
-              </p>
-              <h1 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight mt-0.5">
-                Arena
-              </h1>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-sm border border-[var(--color-border)] flex-shrink-0">
+                <img src="/logo_kaizen.jpg" alt="Neuro-Kaizen Logo" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest">
+                  Neuro-Kaizen
+                </p>
+                <h1 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight mt-0.5">
+                  Arena
+                </h1>
+              </div>
             </div>
 
             {/* XP Balance */}
