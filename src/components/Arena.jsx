@@ -1,5 +1,5 @@
+import { lazy, Suspense, useState, useCallback, useEffect } from 'react'
 import useSWR, { mutate } from 'swr'
-import { useState, useCallback, useEffect } from 'react'
 import {
   Brain,
   BookOpen,
@@ -9,21 +9,21 @@ import {
   ChevronRight,
   Zap,
   CheckCircle2,
+  TrendingUp,
   ShoppingBag,
   Timer,
   CalendarDays,
-  CalendarCheck,
-  GraduationCap,
 } from 'lucide-react'
 import useStore from '../store/useStore'
-import InterleavingTimer from './InterleavingTimer'
-import DailyPlanner from './DailyPlanner'
-import Badges from './Badges'
-import WeeklyPlan from './WeeklyPlan'
-import SpacedRepetition from './SpacedRepetition'
-import FeynmanNotes from './FeynmanNotes'
-import ThemeToggle from './ThemeToggle'
 import { API, fetcher } from '../lib/api'
+import ThemeToggle from './ThemeToggle'
+
+const InterleavingTimer = lazy(() => import('./InterleavingTimer'))
+const DailyPlanner = lazy(() => import('./DailyPlanner'))
+const Badges = lazy(() => import('./Badges'))
+const WeeklyPlan = lazy(() => import('./WeeklyPlan'))
+const SpacedRepetition = lazy(() => import('./SpacedRepetition'))
+const FeynmanNotes = lazy(() => import('./FeynmanNotes'))
 
 const ALL_TASKS = [
   {
@@ -200,154 +200,156 @@ export default function Arena() {
         </div>
       </div>
 
-      {/* ── Timer tab ─────────────────────────────────────────────────────── */}
-      <div className={activeTab === 'timer' ? '' : 'hidden'}>
-        <div className="max-w-lg mx-auto px-5">
+      <Suspense fallback={<div className="flex items-center justify-center h-64 text-[var(--color-muted-foreground)]">Chargement...</div>}>
+        {/* ── Timer tab ─────────────────────────────────────────────────────── */}
+        <div className={activeTab === 'timer' ? '' : 'hidden'}>
+          <div className="max-w-lg mx-auto px-5">
 
-          {isRestricted && (
-            <div className="mt-4 bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
-              <p className="text-xs font-medium text-orange-600">
-                Mode restreint actif — tâches allégées affichées
-              </p>
+            {isRestricted && (
+              <div className="mt-4 bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                <p className="text-xs font-medium text-orange-600">
+                  Mode restreint actif — tâches allégées affichées
+                </p>
+              </div>
+            )}
+
+            <div className="bg-[var(--color-secondary)] rounded-2xl mt-4 mb-6">
+              <InterleavingTimer onSessionComplete={handleSessionComplete} />
             </div>
-          )}
 
-          <div className="bg-[var(--color-secondary)] rounded-2xl mt-4 mb-6">
-            <InterleavingTimer onSessionComplete={handleSessionComplete} />
-          </div>
-
-          <section className="mb-6">
-            <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-3">
-              Protocole du jour
-            </p>
-            <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden">
-              {tasks.map((task, i) => {
-                const Icon = task.icon
-                const isDone = completed.has(task.id)
-                return (
-                  <button
-                    key={task.id}
-                    onClick={() => grantXP(task)}
-                    disabled={isDone}
-                    className={`
-                      w-full flex items-center gap-4 px-5 min-h-[68px] text-left
-                      transition-all duration-150 active:scale-[0.99] active:opacity-70
-                      ${i < tasks.length - 1 ? 'border-b border-[var(--color-border)]/60' : ''}
-                      ${isDone ? 'opacity-50 cursor-default' : 'hover:bg-[var(--color-secondary)]/60'}
-                    `}
-                  >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-green-50' : 'bg-[var(--color-secondary)]'}`}>
-                      {isDone
-                        ? <CheckCircle2 size={18} strokeWidth={2} className="text-green-500" />
-                        : <Icon size={18} strokeWidth={1.75} className="text-[var(--color-foreground)]" />
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className={`text-[15px] font-semibold ${isDone ? 'line-through text-[var(--color-muted-foreground)]' : 'text-[var(--color-foreground)]'}`}>
-                          {task.title}
-                        </p>
-                        <span className="text-[10px] font-semibold text-[var(--color-muted-foreground)] bg-[var(--color-secondary)] px-2 py-0.5 rounded-full uppercase tracking-wide">
-                          {task.tag}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5 truncate">{task.description}</p>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <span className="text-sm font-bold text-[var(--color-primary)]">+{task.xp}</span>
-                      <ChevronRight size={14} strokeWidth={2} className="text-[var(--color-border)]" />
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          {rewards && rewards.length > 0 && (
-            <section className="pb-20">
+            <section className="mb-6">
               <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-3">
-                Boutique
+                Protocole du jour
               </p>
               <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden">
-                {rewards.map((reward, i) => {
-                  const canAfford = xpBalance >= reward.cost
-                  const isRedeeming = redeeming === reward.id
+                {tasks.map((task, i) => {
+                  const Icon = task.icon
+                  const isDone = completed.has(task.id)
                   return (
                     <button
-                      key={reward.id}
-                      onClick={() => redeemReward(reward)}
-                      disabled={!canAfford || !!redeeming}
+                      key={task.id}
+                      onClick={() => grantXP(task)}
+                      disabled={isDone}
                       className={`
                         w-full flex items-center gap-4 px-5 min-h-[68px] text-left
                         transition-all duration-150 active:scale-[0.99] active:opacity-70
-                        ${i < rewards.length - 1 ? 'border-b border-[var(--color-border)]/60' : ''}
-                        ${canAfford && !redeeming ? 'hover:bg-[var(--color-secondary)]/60' : 'opacity-50 cursor-default'}
+                        ${i < tasks.length - 1 ? 'border-b border-[var(--color-border)]/60' : ''}
+                        ${isDone ? 'opacity-50 cursor-default' : 'hover:bg-[var(--color-secondary)]/60'}
                       `}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
-                        <ShoppingBag size={18} strokeWidth={1.75} className="text-[var(--color-primary)]" />
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-green-50' : 'bg-[var(--color-secondary)]'}`}>
+                        {isDone
+                          ? <CheckCircle2 size={18} strokeWidth={2} className="text-green-500" />
+                          : <Icon size={18} strokeWidth={1.75} className="text-[var(--color-foreground)]" />
+                        }
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-semibold text-[var(--color-foreground)]">{reward.title}</p>
-                        <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">{reward.cost.toLocaleString()} XP</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={`text-[15px] font-semibold ${isDone ? 'line-through text-[var(--color-muted-foreground)]' : 'text-[var(--color-foreground)]'}`}>
+                            {task.title}
+                          </p>
+                          <span className="text-[10px] font-semibold text-[var(--color-muted-foreground)] bg-[var(--color-secondary)] px-2 py-0.5 rounded-full uppercase tracking-wide">
+                            {task.tag}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5 truncate">{task.description}</p>
                       </div>
-                      <div className={`
-                        px-4 py-2 rounded-xl text-xs font-semibold flex-shrink-0
-                        ${isRedeeming ? 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'
-                          : canAfford ? 'bg-[var(--color-primary)] text-white'
-                          : 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'}
-                      `}>
-                        {isRedeeming ? '···' : canAfford ? 'Racheter' : 'Insuffisant'}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <span className="text-sm font-bold text-[var(--color-primary)]">+{task.xp}</span>
+                        <ChevronRight size={14} strokeWidth={2} className="text-[var(--color-border)]" />
                       </div>
                     </button>
                   )
                 })}
               </div>
-              <div className="flex items-center justify-center gap-2 mt-4">
-                <Trophy size={12} strokeWidth={1.75} className="text-[var(--color-muted-foreground)]" />
-                <p className="text-xs text-[var(--color-muted-foreground)]">
-                  Solde : <span className="font-semibold text-[var(--color-primary)]">{xpBalance.toLocaleString()} XP</span>
-                </p>
-              </div>
             </section>
-          )}
 
+            {rewards && rewards.length > 0 && (
+              <section className="pb-20">
+                <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-3">
+                  Boutique
+                </p>
+                <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden">
+                  {rewards.map((reward, i) => {
+                    const canAfford = xpBalance >= reward.cost
+                    const isRedeeming = redeeming === reward.id
+                    return (
+                      <button
+                        key={reward.id}
+                        onClick={() => redeemReward(reward)}
+                        disabled={!canAfford || !!redeeming}
+                        className={`
+                          w-full flex items-center gap-4 px-5 min-h-[68px] text-left
+                          transition-all duration-150 active:scale-[0.99] active:opacity-70
+                          ${i < rewards.length - 1 ? 'border-b border-[var(--color-border)]/60' : ''}
+                          ${canAfford && !redeeming ? 'hover:bg-[var(--color-secondary)]/60' : 'opacity-50 cursor-default'}
+                        `}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
+                          <ShoppingBag size={18} strokeWidth={1.75} className="text-[var(--color-primary)]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[15px] font-semibold text-[var(--color-foreground)]">{reward.title}</p>
+                          <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">{reward.cost.toLocaleString()} XP</p>
+                        </div>
+                        <div className={`
+                          px-4 py-2 rounded-xl text-xs font-semibold flex-shrink-0
+                          ${isRedeeming ? 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'
+                            : canAfford ? 'bg-[var(--color-primary)] text-white'
+                            : 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'}
+                        `}>
+                          {isRedeeming ? '···' : canAfford ? 'Racheter' : 'Insuffisant'}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <Trophy size={12} strokeWidth={1.75} className="text-[var(--color-muted-foreground)]" />
+                  <p className="text-xs text-[var(--color-muted-foreground)]">
+                    Solde : <span className="font-semibold text-[var(--color-primary)]">{xpBalance.toLocaleString()} XP</span>
+                  </p>
+                </div>
+              </section>
+            )}
+
+          </div>
         </div>
-      </div>
 
-      {/* ── Planner tab ───────────────────────────────────────────────────── */}
-      <div className={activeTab === 'planner' ? '' : 'hidden'}>
-        <DailyPlanner embedded />
-      </div>
-
-      {/* ── SR tab ────────────────────────────────────────────────────────── */}
-      <div className={activeTab === 'sr' ? '' : 'hidden'}>
-        <div className="max-w-lg mx-auto pt-4">
-          <SpacedRepetition />
+        {/* ── Planner tab ───────────────────────────────────────────────────── */}
+        <div className={activeTab === 'planner' ? '' : 'hidden'}>
+          <DailyPlanner embedded />
         </div>
-      </div>
 
-      {/* ── Feynman tab ───────────────────────────────────────────────────── */}
-      <div className={activeTab === 'feynman' ? '' : 'hidden'}>
-        <div className="max-w-lg mx-auto pt-4">
-          <FeynmanNotes />
+        {/* ── SR tab ────────────────────────────────────────────────────────── */}
+        <div className={activeTab === 'sr' ? '' : 'hidden'}>
+          <div className="max-w-lg mx-auto pt-4">
+            <SpacedRepetition />
+          </div>
         </div>
-      </div>
 
-      {/* ── Week tab ──────────────────────────────────────────────────────── */}
-      <div className={activeTab === 'week' ? '' : 'hidden'}>
-        <div className="max-w-2xl mx-auto">
-          <WeeklyPlan />
+        {/* ── Feynman tab ───────────────────────────────────────────────────── */}
+        <div className={activeTab === 'feynman' ? '' : 'hidden'}>
+          <div className="max-w-lg mx-auto pt-4">
+            <FeynmanNotes />
+          </div>
         </div>
-      </div>
 
-      {/* ── Badges tab ────────────────────────────────────────────────────── */}
-      <div className={activeTab === 'badges' ? '' : 'hidden'}>
-        <div className="max-w-lg mx-auto">
-          <Badges />
+        {/* ── Week tab ──────────────────────────────────────────────────────── */}
+        <div className={activeTab === 'week' ? '' : 'hidden'}>
+          <div className="max-w-2xl mx-auto">
+            <WeeklyPlan />
+          </div>
         </div>
-      </div>
+
+        {/* ── Badges tab ────────────────────────────────────────────────────── */}
+        <div className={activeTab === 'badges' ? '' : 'hidden'}>
+          <div className="max-w-lg mx-auto">
+            <Badges />
+          </div>
+        </div>
+      </Suspense>
 
       {/* Theme toggle — fixed bottom right */}
       <ThemeToggle />

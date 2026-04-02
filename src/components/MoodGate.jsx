@@ -61,6 +61,9 @@ export default function MoodGate() {
       // Offline-first: continue regardless
     }
 
+    localStorage.setItem('mile_last_mood_date', new Date().toDateString())
+    localStorage.setItem('mile_last_mood_score', mood.score.toString())
+
     setTimeout(() => setMood(mood.score), 350)
     setLoading(false)
   }
@@ -75,7 +78,7 @@ export default function MoodGate() {
             Neuro-Kaizen · Check-in
           </p>
           <h1 className="text-[2rem] font-bold text-[#111111] leading-tight tracking-tight">
-            Comment va<br />le système ?
+            Bonjour ICE.Y
           </h1>
           <p className="mt-3 text-[15px] text-[#8E8E93] leading-relaxed">
             Ton niveau d'énergie adapte le protocole du jour.
