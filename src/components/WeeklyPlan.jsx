@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Calendar, ChevronLeft, ChevronRight, Clock,
@@ -23,6 +23,7 @@ function getCategoryColor(title) {
 }
 
 export default function WeeklyPlan() {
+  const completing = useRef(new Set()) // double-submit guard
   const [currentWeek, setCurrentWeek] = useState(new Date())
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
@@ -33,23 +34,33 @@ export default function WeeklyPlan() {
 
   // Mark a task complete by adding the remaining minutes via the existing endpoint
   const completeTask = async (task) => {
+    if (completing.current.has(task.id)) return
+    completing.current.add(task.id)
     if (isCompleted(task)) return
     const remaining = task.target_minutes - task.spent_minutes
     if (remaining <= 0) return
-    await fetch(`${API}/tasks/${task.id}/add_time`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ minutes: remaining }),
-    })
-    // Synchro avec l'économie: Gain d'XP pour avoir terminé la tâche
-    await fetch(`${API}/xp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: 15, reason: task.title }),
-    })
+    try {
+      const r1 = await fetch(`${API}/tasks/${task.id}/add_time`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes: remaining }),
+      })
+      if (!r1.ok) throw new Error(`add_time failed: ${r1.status}`)
 
-    mutate(`${API}/tasks`)
-    mutate(`${API}/xp/balance`)
+      const r2 = await fetch(`${API}/xp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 15, reason: task.title.slice(0, 100) }),
+      })
+      if (!r2.ok) throw new Error(`xp grant failed: ${r2.status}`)
+
+      mutate(`${API}/tasks`)
+      mutate(`${API}/xp/balance`)
+    } catch (err) {
+      console.error('[completeTask]', err)
+    } finally {
+      completing.current.delete(task.id)
+    }
   }
 
   // Group tasks by creation date matching the weekday

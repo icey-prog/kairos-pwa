@@ -111,13 +111,17 @@ export default function Arena() {
     if (completed.has(task.id)) return
     setCompleted((prev) => new Set([...prev, task.id]))
     try {
-      await fetch(`${API}/xp`, {
+      const res = await fetch(`${API}/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: task.xp, reason: task.title }),
+        body: JSON.stringify({ amount: task.xp, reason: task.title.slice(0, 100) }),
       })
+      if (!res.ok) throw new Error(`XP grant failed: ${res.status}`)
       mutate(`${API}/xp/balance`)
-    } catch (_) {}
+    } catch (err) {
+      console.error('[grantXP]', err)
+      setCompleted((prev) => { const s = new Set(prev); s.delete(task.id); return s })
+    }
   }
 
   const redeemReward = async (reward) => {
@@ -133,13 +137,16 @@ export default function Arena() {
 
   const handleSessionComplete = useCallback(async () => {
     try {
-      await fetch(`${API}/xp`, {
+      const res = await fetch(`${API}/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: 50, reason: 'Session focus complétée' }),
       })
+      if (!res.ok) throw new Error(`XP session failed: ${res.status}`)
       mutate(`${API}/xp/balance`)
-    } catch (_) {}
+    } catch (err) {
+      console.error('[handleSessionComplete]', err)
+    }
   }, [])
 
   return (

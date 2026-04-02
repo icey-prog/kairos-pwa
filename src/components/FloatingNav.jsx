@@ -112,12 +112,17 @@ export default function FloatingNav() {
             </CommandItem>
           </CommandGroup>
           <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => {
-              fetch(`${API}/xp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: 10, reason: 'Quick XP via command palette' }),
-              }).catch(() => {})
+            <CommandItem onSelect={async () => {
+              try {
+                const res = await fetch(`${API}/xp`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ amount: 10, reason: 'Quick XP via command palette' }),
+                })
+                if (!res.ok) throw new Error(`xp failed: ${res.status}`)
+              } catch (err) {
+                console.error('[quickXP]', err)
+              }
               setOpen(false)
             }}>
               <Zap className="mr-2 h-4 w-4 text-amber-400" />

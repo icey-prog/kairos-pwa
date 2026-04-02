@@ -87,23 +87,29 @@ export default function FeynmanNotes() {
       mastery_level: newNote.masteryLevel,
     }
     try {
-      await fetch(`${API}/feynman`, {
+      const res = await fetch(`${API}/feynman`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
+      if (!res.ok) throw new Error(`create note failed: ${res.status}`)
       mutate(`${API}/feynman`)
-    } catch (_) {}
-    setNewNote(EMPTY_NOTE)
-    setIsDialogOpen(false)
+      setNewNote(EMPTY_NOTE)
+      setIsDialogOpen(false)
+    } catch (err) {
+      console.error('[handleSubmit]', err)
+    }
   }
 
   const handleDelete = async (id) => {
     if (!confirm('Supprimer cette note ?')) return
     try {
-      await fetch(`${API}/feynman/${id}`, { method: 'DELETE' })
+      const res = await fetch(`${API}/feynman/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error(`delete note failed: ${res.status}`)
       mutate(`${API}/feynman`)
-    } catch (_) {}
+    } catch (err) {
+      console.error('[handleDelete]', err)
+    }
   }
 
   const addAnalogy = () => setNewNote({ ...newNote, analogies: [...newNote.analogies, ''] })

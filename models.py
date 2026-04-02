@@ -7,35 +7,35 @@ class MoodLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     score: int = Field(ge=1, le=5)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=1000)
 
 
 class MoodLogCreate(SQLModel):
     score: int = Field(ge=1, le=5)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=1000)
 
 
 class XpTransaction(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     amount: int
-    reason: str
+    reason: str = Field(max_length=200)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class XpTransactionCreate(SQLModel):
     amount: int
-    reason: str
+    reason: str = Field(max_length=200)
 
 
 class Reward(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    title: str
+    title: str = Field(max_length=200)
     cost: int = Field(ge=0)
     is_active: bool = Field(default=True)
 
 
 class RewardCreate(SQLModel):
-    title: str
+    title: str = Field(max_length=200)
     cost: int = Field(ge=0)
 
 
@@ -43,8 +43,8 @@ class RewardCreate(SQLModel):
 
 class Task(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    title: str
-    resources: Optional[str] = Field(default=None)          # JSON-encoded list stored as text
+    title: str = Field(max_length=200)
+    resources: Optional[str] = Field(default=None, max_length=2000)  # JSON-encoded list stored as text
     target_minutes: int = Field(default=90, ge=1)
     spent_minutes: int = Field(default=0, ge=0)
     reminder_time: Optional[datetime] = Field(default=None)
@@ -52,8 +52,8 @@ class Task(SQLModel, table=True):
 
 
 class TaskCreate(SQLModel):
-    title: str
-    resources: Optional[str] = None
+    title: str = Field(max_length=200)
+    resources: Optional[str] = Field(default=None, max_length=2000)
     target_minutes: int = Field(default=90, ge=1)
     reminder_time: Optional[datetime] = None
 
@@ -66,23 +66,23 @@ class AddTimePayload(SQLModel):
 
 class FeynmanNote(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    discipline: str
-    topic: str
-    simple_explanation: str
-    analogies: Optional[str] = None
-    gaps: Optional[str] = None
-    refined_explanation: Optional[str] = None
+    discipline: str = Field(max_length=100)
+    topic: str = Field(max_length=200)
+    simple_explanation: str = Field(max_length=2000)
+    analogies: Optional[str] = Field(default=None, max_length=2000)
+    gaps: Optional[str] = Field(default=None, max_length=2000)
+    refined_explanation: Optional[str] = Field(default=None, max_length=2000)
     mastery_level: int = Field(default=0, ge=0, le=100)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class FeynmanNoteCreate(SQLModel):
-    discipline: str
-    topic: str
-    simple_explanation: str
-    analogies: Optional[str] = None
-    gaps: Optional[str] = None
-    refined_explanation: Optional[str] = None
+    discipline: str = Field(max_length=100)
+    topic: str = Field(max_length=200)
+    simple_explanation: str = Field(max_length=2000)
+    analogies: Optional[str] = Field(default=None, max_length=2000)
+    gaps: Optional[str] = Field(default=None, max_length=2000)
+    refined_explanation: Optional[str] = Field(default=None, max_length=2000)
     mastery_level: int = 0
 
 
@@ -90,9 +90,9 @@ class FeynmanNoteCreate(SQLModel):
 
 class SpacedCard(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    discipline: str
-    front: str
-    back: str
+    discipline: str = Field(max_length=100)
+    front: str = Field(max_length=500)
+    back: str = Field(max_length=2000)
     interval: int = Field(default=0)
     repetition: int = Field(default=0)
     easiness_factor: float = Field(default=2.5)
@@ -100,9 +100,9 @@ class SpacedCard(SQLModel, table=True):
 
 
 class SpacedCardCreate(SQLModel):
-    discipline: str
-    front: str
-    back: str
+    discipline: str = Field(max_length=100)
+    front: str = Field(max_length=500)
+    back: str = Field(max_length=2000)
     interval: int = 0
     repetition: int = 0
     easiness_factor: float = 2.5

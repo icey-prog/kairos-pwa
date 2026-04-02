@@ -3,6 +3,9 @@ import { BatteryLow, Battery, BatteryMedium, BatteryFull, Zap } from 'lucide-rea
 import useStore from '../store/useStore'
 import { API } from '../lib/api'
 
+// Solo-user display name — update when auth is added
+const DISPLAY_NAME = 'ICE.Y'
+
 const MOODS = [
   {
     score: 1,
@@ -78,7 +81,7 @@ export default function MoodGate() {
             Neuro-Kaizen · Check-in
           </p>
           <h1 className="text-[2rem] font-bold text-[#111111] leading-tight tracking-tight">
-            Bonjour ICE.Y
+            Bonjour {DISPLAY_NAME}
           </h1>
           <p className="mt-3 text-[15px] text-[#8E8E93] leading-relaxed">
             Ton niveau d'énergie adapte le protocole du jour.

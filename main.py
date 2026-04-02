@@ -2,8 +2,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlmodel import Session, func, select
 
 from database import create_db_and_tables, get_session
@@ -25,6 +28,9 @@ from models import (
 )
 
 
+limiter = Limiter(key_func=get_remote_address)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
@@ -32,19 +38,22 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Neuro-Kaizen API", version="1.0.0", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
 # --- MOOD ---
 
 @app.post("/api/mood", response_model=MoodLog, status_code=201)
-def create_mood_log(payload: MoodLogCreate, session: Session = Depends(get_session)):
+@limiter.limit("20/minute")
+def create_mood_log(request: Request, payload: MoodLogCreate, session: Session = Depends(get_session)):
     entry = MoodLog.model_validate(payload)
     session.add(entry)
     session.commit()
@@ -61,7 +70,8 @@ def get_xp_balance(session: Session = Depends(get_session)):
 
 
 @app.post("/api/xp", response_model=XpTransaction, status_code=201)
-def create_xp_transaction(payload: XpTransactionCreate, session: Session = Depends(get_session)):
+@limiter.limit("20/minute")
+def create_xp_transaction(request: Request, payload: XpTransactionCreate, session: Session = Depends(get_session)):
     tx = XpTransaction.model_validate(payload)
     session.add(tx)
     session.commit()
@@ -87,24 +97,29 @@ def create_reward(payload: RewardCreate, session: Session = Depends(get_session)
 
 
 @app.post("/api/rewards/redeem/{reward_id}")
-def redeem_reward(reward_id: int, session: Session = Depends(get_session)):
-    reward = session.get(Reward, reward_id)
-    if not reward or not reward.is_active:
-        raise HTTPException(status_code=404, detail="Reward not found or inactive.")
+@limiter.limit("10/minute")
+def redeem_reward(request: Request, reward_id: int, session: Session = Depends(get_session)):
+    # Lock the table for the duration of this transaction so concurrent
+    # requests cannot both pass the balance check and double-spend XP.
+    with session.begin_nested():
+        reward = session.get(Reward, reward_id)
+        if not reward or not reward.is_active:
+            raise HTTPException(status_code=404, detail="Reward not found or inactive.")
 
-    balance_result = session.exec(select(func.sum(XpTransaction.amount))).one()
-    balance = balance_result or 0
+        # Re-read balance inside the nested transaction to prevent TOCTOU.
+        balance_result = session.exec(select(func.sum(XpTransaction.amount))).one()
+        balance = balance_result or 0
 
-    if balance < reward.cost:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Insufficient XP. Balance: {balance}, Required: {reward.cost}.",
-        )
+        if balance < reward.cost:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient XP. Balance: {balance}, Required: {reward.cost}.",
+            )
 
-    tx = XpTransaction(amount=-reward.cost, reason=f"Redeemed reward: {reward.title}")
-    session.add(tx)
+        tx = XpTransaction(amount=-reward.cost, reason=f"Redeemed reward: {reward.title}")
+        session.add(tx)
+
     session.commit()
-    session.refresh(tx)
 
     return {
         "success": True,

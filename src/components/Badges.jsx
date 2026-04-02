@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Award, Lock, Unlock, Trophy, Flame, Star,
@@ -26,10 +27,14 @@ export default function Badges() {
   const { data: xpData } = useSWR(`${API}/xp/balance`, fetcher, { refreshInterval: 5000 })
   const xpBalance = xpData?.balance ?? 0
 
-  const badges = BADGES_CONFIG.map((b) => ({
-    ...b,
-    unlockedAt: xpBalance >= b.condition.value ? new Date() : null,
-  }))
+  const badges = useMemo(
+    () =>
+      BADGES_CONFIG.map((b) => ({
+        ...b,
+        unlockedAt: xpBalance >= b.condition.value ? new Date() : null,
+      })),
+    [xpBalance],
+  )
 
   const unlocked = badges.filter((b) => b.unlockedAt)
   const locked = badges.filter((b) => !b.unlockedAt)

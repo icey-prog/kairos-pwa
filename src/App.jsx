@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import useStore from './store/useStore'
 import MoodGate from './components/MoodGate'
 import Arena from './components/Arena'
+import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 import FloatingNav from './components/FloatingNav'
 
@@ -26,7 +27,9 @@ export default function App() {
 
   return (
     <>
-      {moodLogged ? <Arena /> : <MoodGate />}
+      <ErrorBoundary>
+        {moodLogged ? <Arena /> : <MoodGate />}
+      </ErrorBoundary>
       <FloatingNav />
       <Toaster position="bottom-right" />
     </>

@@ -58,6 +58,7 @@ export default function SpacedRepetition() {
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
   const [newItem, setNewItem] = useState({ content: '', discipline: '' })
+  const [saving, setSaving] = useState(false)
 
   const items = (rawItems || []).map(i => ({ ...i, next_review_date: parseISO(i.next_review_date) }))
   const today = new Date()
@@ -69,7 +70,8 @@ export default function SpacedRepetition() {
   const mastered = items.filter((item) => item.repetition >= 5)
 
   const handleAddItem = async () => {
-    if (!newItem.content || !newItem.discipline) return
+    if (!newItem.content || !newItem.discipline || saving) return
+    setSaving(true)
     const payload = {
       front: newItem.content,
       back: '',
@@ -80,15 +82,20 @@ export default function SpacedRepetition() {
       next_review_date: new Date().toISOString()
     }
     try {
-      await fetch(`${API}/spaced-cards`, {
+      const res = await fetch(`${API}/spaced-cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
+      if (!res.ok) throw new Error(`create card failed: ${res.status}`)
       mutate(`${API}/spaced-cards`)
-    } catch (_) {}
-    setNewItem({ content: '', discipline: '' })
-    setIsDialogOpen(false)
+      setNewItem({ content: '', discipline: '' })
+      setIsDialogOpen(false)
+    } catch (err) {
+      console.error('[handleAddItem]', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const startReview = () => {
@@ -125,7 +132,9 @@ export default function SpacedRepetition() {
         setCurrentReviewIndex(0)
         setShowAnswer(false)
       }
-    } catch (_) {}
+    } catch (err) {
+      console.error('[handleReview]', err)
+    }
   }
 
   // ── Review mode UI ──────────────────────────────────────────────────────────
@@ -279,7 +288,7 @@ export default function SpacedRepetition() {
                 <Button
                   onClick={handleAddItem}
                   className="w-full gap-2"
-                  disabled={!newItem.content || !newItem.discipline}
+                  disabled={!newItem.content || !newItem.discipline || saving}
                 >
                   <Plus className="w-4 h-4" />
                   Ajouter à la révision
