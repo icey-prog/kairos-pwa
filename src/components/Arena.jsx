@@ -82,13 +82,15 @@ const SUB_TABS = {
 export default function Arena() {
   const [completed, setCompleted] = useState(new Set())
   const [redeeming, setRedeeming] = useState(null)
-  
+  const [plannerDefaultDate, setPlannerDefaultDate] = useState(null)
+
   const currentMood = useStore((s) => s.currentMood)
   const setXpBalance = useStore((s) => s.setXpBalance)
-  
+
   const mainTab = useStore((s) => s.mainTab)
   const activeTab = useStore((s) => s.activeTab)
   const setActiveTab = useStore((s) => s.setActiveTab)
+  const setMainTab = useStore((s) => s.setMainTab)
 
   useEffect(() => {
     const validTabs = SUB_TABS[mainTab]?.map(t => t.id) || [];
@@ -326,7 +328,7 @@ export default function Arena() {
 
         {/* ── Planner tab ───────────────────────────────────────────────────── */}
         <div className={activeTab === 'planner' ? '' : 'hidden'}>
-          <DailyPlanner embedded />
+          <DailyPlanner embedded defaultDate={plannerDefaultDate} />
         </div>
 
         {/* ── SR tab ────────────────────────────────────────────────────────── */}
@@ -346,7 +348,11 @@ export default function Arena() {
         {/* ── Week tab ──────────────────────────────────────────────────────── */}
         <div className={activeTab === 'week' ? '' : 'hidden'}>
           <div className="max-w-2xl mx-auto">
-            <WeeklyPlan />
+            <WeeklyPlan onAddTask={(dateStr) => {
+              setPlannerDefaultDate(dateStr)
+              setMainTab('focus')
+              setActiveTab('planner')
+            }} />
           </div>
         </div>
 

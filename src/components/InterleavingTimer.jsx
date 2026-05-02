@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Play, Pause, RotateCcw, Zap } from 'lucide-react'
+import { Play, Pause, RotateCcw, Zap, ChevronRight } from 'lucide-react'
 import { mutate } from 'swr'
+import useSWR from 'swr'
 import useStore from '../store/useStore'
-import { API } from '../lib/api'
+import { API, fetcher } from '../lib/api'
+import { adaptTask } from '../lib/taskBridge'
 import { toast } from 'sonner'
+
+const CATEGORY_COLORS = {
+  dev:      'bg-blue-500/15 text-blue-600',
+  learn:    'bg-purple-500/15 text-purple-600',
+  health:   'bg-orange-500/15 text-orange-600',
+  personal: 'bg-gray-500/15 text-gray-600',
+  project:  'bg-amber-500/15 text-amber-600',
+}
+const CATEGORY_LABELS = {
+  dev: 'Dev', learn: 'Learn', health: 'Santé', personal: 'Perso', project: 'Projet',
+}
 
 const WORK_DURATION = 25 * 60
 const BREAK_DURATION = 5 * 60
@@ -25,6 +38,10 @@ export default function InterleavingTimer({ onSessionComplete }) {
 
   const intervalRef = useRef(null)
   const activeTask = useStore((s) => s.activeTask)
+  const setActiveTask = useStore((s) => s.setActiveTask)
+  const setActiveTab = useStore((s) => s.setActiveTab)
+
+  const { data: tasks = [] } = useSWR(`${API}/tasks`, fetcher, { refreshInterval: 5000 })
 
   const totalDuration = phase === 'focus' ? WORK_DURATION : BREAK_DURATION
   const progress = timeLeft / totalDuration
@@ -93,9 +110,9 @@ export default function InterleavingTimer({ onSessionComplete }) {
   return (
     <div className="flex flex-col items-center py-6">
 
-      {/* Active task title */}
+      {/* Active task / task picker */}
       {activeTask ? (
-        <div className="flex flex-col items-center mb-5 px-4 text-center">
+        <div className="flex flex-col items-center mb-5 px-4 text-center w-full">
           <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest mb-1">
             Tâche active
           </p>
@@ -114,11 +131,53 @@ export default function InterleavingTimer({ onSessionComplete }) {
           <p className="text-[11px] text-[#8E8E93] mt-1 tabular-nums">
             {activeTask.spent_minutes}/{activeTask.target_minutes} min
           </p>
+          <button
+            onClick={() => setActiveTask(null)}
+            className="mt-2 text-[11px] text-[#8E8E93] hover:text-[#007AFF] transition-colors"
+          >
+            Changer de tâche
+          </button>
         </div>
       ) : (
-        <p className="text-xs text-[#C7C7CC] mb-5">
-          Aucune tâche sélectionnée — va dans le Planner
-        </p>
+        <div className="w-full px-4 mb-5">
+          <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest mb-2 text-center">
+            Choisir une tâche
+          </p>
+          {tasks.length === 0 ? (
+            <button
+              onClick={() => setActiveTab('planner')}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#F7F7F5] text-[13px] text-[#8E8E93] hover:text-[#007AFF] hover:bg-[#007AFF]/5 transition-all"
+            >
+              <span>Crée une tâche dans Quêtes</span>
+              <ChevronRight size={14} />
+            </button>
+          ) : (
+            <div className="space-y-1.5 max-h-[140px] overflow-y-auto">
+              {tasks.map((task) => (
+                <button
+                  key={task.id}
+                  onClick={() => setActiveTask(adaptTask(task))}
+                  className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl bg-[#F7F7F5] hover:bg-[#007AFF]/8 transition-all text-left group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-[#111111] truncate group-hover:text-[#007AFF]">
+                      {task.title}
+                    </p>
+                    <p className="text-[11px] text-[#8E8E93] tabular-nums">
+                      {task.spent_minutes}/{task.target_minutes} min
+                    </p>
+                  </div>
+                  {task.category && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[task.category] ?? 'bg-gray-100 text-gray-500'}`}>
+                      {CATEGORY_LABELS[task.category] ?? task.category}
+                    </span>
+                  )}
+                  <ChevronRight size={14} className="text-[#C7C7CC] group-hover:text-[#007AFF] flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Phase + subject label */}

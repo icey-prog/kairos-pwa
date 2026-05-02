@@ -32,9 +32,9 @@ export default function FloatingNav() {
 
   const navItems = [
     { id: 'focus',     label: 'Focus',     icon: Timer },
-    { id: 'search',    label: 'Search',    icon: Sparkles, center: true },
-    { id: 'learn',     label: 'Learn',     icon: Brain },
-    { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+    { id: 'search',    label: 'Chercher',  icon: Sparkles, center: true },
+    { id: 'learn',     label: 'Apprendre', icon: Brain },
+    { id: 'dashboard', label: 'Stats',     icon: TrendingUp },
   ]
 
   return (
@@ -58,13 +58,14 @@ export default function FloatingNav() {
                   key={item.id}
                   onClick={() => setOpen(true)}
                   className={cn(
-                    "relative w-14 h-12 flex items-center justify-center rounded-full transition-all duration-200",
+                    "relative w-14 h-14 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200",
                     "hover:scale-110 active:scale-95 group",
                     isActive ? "text-[var(--color-primary)]" : "text-[var(--color-muted-foreground)]"
                   )}
                 >
                   <div className="absolute inset-0 bg-[var(--color-primary)] opacity-0 group-hover:opacity-10 rounded-full transition-opacity" />
-                  <Icon size={24} strokeWidth={isActive ? 2 : 1.5} />
+                  <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                  <span className="text-[9px] font-medium leading-none">{item.label}</span>
                 </button>
               )
             }
@@ -74,12 +75,13 @@ export default function FloatingNav() {
                 key={item.id}
                 onClick={() => setMainTab(item.id)}
                 className={cn(
-                  "relative w-14 h-12 flex items-center justify-center rounded-full transition-all duration-200",
+                  "relative w-14 h-14 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200",
                   "hover:scale-105 active:scale-95",
                   isActive ? "text-[var(--color-primary)]" : "text-[var(--color-muted-foreground)]"
                 )}
               >
-                <Icon size={24} strokeWidth={isActive ? 2 : 1.5} />
+                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <span className="text-[9px] font-medium leading-none">{item.label}</span>
                 {isActive && (
                   <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-[var(--color-primary)]" />
                 )}
