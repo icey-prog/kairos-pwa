@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import useSWR, { mutate } from 'swr'
 import { Plus, Link, ExternalLink, X, Bell, Play } from 'lucide-react'
 import useStore from '../store/useStore'
@@ -124,7 +125,12 @@ export default function DailyPlanner({ embedded = false }) {
   }
 
   return (
-    <div className={`bg-white px-5 max-w-lg mx-auto ${embedded ? 'pt-6 pb-20' : 'min-h-screen py-12'}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+      className={`bg-white px-5 max-w-lg mx-auto ${embedded ? 'pt-6 pb-20' : 'min-h-screen py-12'}`}
+    >
 
       {!embedded && (
         <div className="mb-8">
@@ -267,14 +273,23 @@ export default function DailyPlanner({ embedded = false }) {
             En cours
           </p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            {tasks.map((task, i) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                divider={i < tasks.length - 1}
-                onFocus={() => focusTask(task)}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {tasks.map((task, i) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8, height: 0 }}
+                  transition={{ type: 'spring', damping: 26, stiffness: 260, delay: i * 0.04 }}
+                >
+                  <TaskRow
+                    task={task}
+                    divider={i < tasks.length - 1}
+                    onFocus={() => focusTask(task)}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </section>
       )}
@@ -286,14 +301,23 @@ export default function DailyPlanner({ embedded = false }) {
             Terminées · {completed.length}
           </p>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden opacity-50">
-            {completed.map((task, i) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                divider={i < completed.length - 1}
-                onFocus={null}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {completed.map((task, i) => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ type: 'spring', damping: 26, stiffness: 260, delay: i * 0.03 }}
+                >
+                  <TaskRow
+                    task={task}
+                    divider={i < completed.length - 1}
+                    onFocus={null}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </section>
       )}
@@ -304,7 +328,7 @@ export default function DailyPlanner({ embedded = false }) {
         </div>
       )}
 
-    </div>
+    </motion.div>
   )
 }
 

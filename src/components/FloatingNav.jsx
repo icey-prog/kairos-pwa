@@ -31,10 +31,10 @@ export default function FloatingNav() {
   }, [])
 
   const navItems = [
-    { id: 'focus',     label: 'Focus',     icon: Timer },
-    { id: 'search',    label: 'Search',    icon: Sparkles, center: true },
-    { id: 'learn',     label: 'Learn',     icon: Brain },
-    { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+    { id: 'focus',     label: 'Focus',    icon: Timer },
+    { id: 'search',    label: 'Chercher', icon: Sparkles, center: true },
+    { id: 'learn',     label: 'Apprendre', icon: Brain },
+    { id: 'dashboard', label: 'Stats',    icon: TrendingUp },
   ]
 
   return (
@@ -90,28 +90,28 @@ export default function FloatingNav() {
       </div>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
+        <CommandInput placeholder="Rechercher ou taper une commande..." />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>Aucun résultat.</CommandEmpty>
           <CommandGroup heading="Navigation">
             <CommandItem onSelect={() => { setMainTab('focus'); setActiveTab('timer'); setOpen(false); }}>
               <Timer className="mr-2 h-4 w-4" />
-              <span>Go to Focus Timer</span>
+              <span>Chrono Focus</span>
             </CommandItem>
             <CommandItem onSelect={() => { setMainTab('focus'); setActiveTab('planner'); setOpen(false); }}>
               <CalendarDays className="mr-2 h-4 w-4" />
-              <span>Open Daily Planner</span>
+              <span>Planificateur</span>
             </CommandItem>
             <CommandItem onSelect={() => { setMainTab('learn'); setActiveTab('sr'); setOpen(false); }}>
               <Brain className="mr-2 h-4 w-4" />
-              <span>Start Learning Session</span>
+              <span>Session d'apprentissage</span>
             </CommandItem>
             <CommandItem onSelect={() => { setMainTab('dashboard'); setActiveTab('badges'); setOpen(false); }}>
               <Trophy className="mr-2 h-4 w-4" />
-              <span>View My Badges</span>
+              <span>Mes Badges</span>
             </CommandItem>
           </CommandGroup>
-          <CommandGroup heading="Quick Actions">
+          <CommandGroup heading="Actions rapides">
             <CommandItem onSelect={async () => {
               try {
                 const res = await fetch(`${API}/xp`, {
@@ -126,11 +126,11 @@ export default function FloatingNav() {
               setOpen(false)
             }}>
               <Zap className="mr-2 h-4 w-4 text-amber-400" />
-              <span>Log Quick XP (+10)</span>
+              <span>Gagner 10 XP rapide</span>
             </CommandItem>
             <CommandItem onSelect={() => { setMainTab('focus'); setActiveTab('planner'); setOpen(false); }}>
               <Plus className="mr-2 h-4 w-4" />
-              <span>Create New Task</span>
+              <span>Nouvelle tâche</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>

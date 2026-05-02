@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import useStore from './store/useStore'
 import MoodGate from './components/MoodGate'
 import Arena from './components/Arena'
@@ -28,7 +29,29 @@ export default function App() {
   return (
     <>
       <ErrorBoundary>
-        {moodLogged ? <Arena /> : <MoodGate />}
+        <AnimatePresence mode="wait">
+          {moodLogged ? (
+            <motion.div
+              key="arena"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+            >
+              <Arena />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="moodgate"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96, y: -16 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+            >
+              <MoodGate />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </ErrorBoundary>
       <FloatingNav />
       <Toaster position="bottom-right" />

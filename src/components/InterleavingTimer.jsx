@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Play, Pause, RotateCcw, Zap } from 'lucide-react'
 import { mutate } from 'swr'
 import useStore from '../store/useStore'
@@ -151,21 +152,42 @@ export default function InterleavingTimer({ onSessionComplete }) {
         </svg>
 
         <div className="absolute flex flex-col items-center">
-          {justCompleted ? (
-            <div className="flex items-center gap-1 animate-pulse">
-              <Zap size={20} className="text-[#007AFF]" strokeWidth={2} />
-              <span className="text-lg font-bold text-[#007AFF]">+50 XP</span>
-            </div>
-          ) : (
-            <>
-              <span className="text-[40px] font-bold text-[#111111] tabular-nums leading-none tracking-tight">
-                {fmt(timeLeft)}
-              </span>
-              <span className="text-xs text-[#8E8E93] mt-1 font-medium">
-                {isFocus ? 'minutes de focus' : 'repose-toi'}
-              </span>
-            </>
-          )}
+          <AnimatePresence mode="wait">
+            {justCompleted ? (
+              <motion.div
+                key="xp"
+                initial={{ opacity: 0, scale: 0.6, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -8 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                className="flex items-center gap-1"
+              >
+                <motion.div
+                  animate={{ rotate: [0, -15, 15, -10, 10, 0] }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  <Zap size={20} className="text-[#007AFF]" strokeWidth={2} />
+                </motion.div>
+                <span className="text-lg font-bold text-[#007AFF]">+50 XP</span>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="timer"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col items-center"
+              >
+                <span className="text-[40px] font-bold text-[#111111] tabular-nums leading-none tracking-tight">
+                  {fmt(timeLeft)}
+                </span>
+                <span className="text-xs text-[#8E8E93] mt-1 font-medium">
+                  {isFocus ? 'minutes de focus' : 'repose-toi'}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
