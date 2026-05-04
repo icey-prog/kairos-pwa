@@ -22,7 +22,7 @@ export default function App() {
 
     // Enregistrement du Service Worker PWA
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
+      navigator.serviceWorker.register('/sw.js').catch(() => { })
     }
   }, [setMood])
 
