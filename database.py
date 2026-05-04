@@ -1,8 +1,12 @@
+import os
 import sqlite3
 from sqlmodel import SQLModel, create_engine, Session
 
-DATABASE_URL = "sqlite:///./neuro_kaizen.db"
-DB_PATH = "./neuro_kaizen.db"
+# On Render: mount a persistent disk at /data and set DB_DIR=/data
+# Locally: use current directory
+_db_dir = os.environ.get("DB_DIR", ".")
+DATABASE_URL = f"sqlite:///{_db_dir}/neuro_kaizen.db"
+DB_PATH = f"{_db_dir}/neuro_kaizen.db"
 
 engine = create_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
 
