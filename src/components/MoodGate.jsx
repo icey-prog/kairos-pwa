@@ -51,30 +51,26 @@ export default function MoodGate() {
   const [exiting, setExiting] = useState(false)
   const setMood = useStore((s) => s.setMood)
 
-  const handleSelect = async (mood) => {
+  const handleSelect = (mood) => {
     if (confirming || exiting) return
     setSelected(mood.score)
     setConfirming(true)
 
-    try {
-      await fetch(`${API}/mood`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: mood.score }),
-      })
-    } catch (_) {
-      // Offline-first: continue regardless
-    }
+    // Fire-and-forget — don't block UI on network
+    fetch(`${API}/mood`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score: mood.score }),
+    }).catch(() => {})
 
     localStorage.setItem('mile_last_mood_date', new Date().toDateString())
     localStorage.setItem('mile_last_mood_score', mood.score.toString())
 
-    // Show confirmation feedback for 600ms then animate exit
     setTimeout(() => {
       setConfirming(false)
       setExiting(true)
-      setTimeout(() => setMood(mood.score), 350)
-    }, 600)
+      setTimeout(() => setMood(mood.score), 180)
+    }, 200)
   }
 
   const selectedMood = MOODS.find((m) => m.score === selected)
@@ -85,8 +81,8 @@ export default function MoodGate() {
         <motion.div
           key="moodgate"
           initial={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: -24 }}
-          transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+          exit={{ opacity: 0, scale: 0.96, y: -16 }}
+          transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
           className="min-h-screen bg-white flex flex-col justify-center px-6 py-12"
         >
           <div className="max-w-sm mx-auto w-full">
