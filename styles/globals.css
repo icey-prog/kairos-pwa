@@ -106,3 +106,30 @@ html, body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+.text-gradient-xp {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Category left-accent bars ───────────────────────────────────────────── */
+/* Applied as border-l-[3px] + inline borderLeftColor on task cards */
+
+/* ─── Subtle dot-grid page texture ───────────────────────────────────────── */
+#root {
+  position: relative;
+}
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 0;
+}
+.glass-mode #root::before {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+}

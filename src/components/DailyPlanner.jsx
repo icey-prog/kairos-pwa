@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import useSWR, { mutate } from 'swr'
 import { Plus, Link, ExternalLink, X, Bell, Play, Calendar } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import useStore from '../store/useStore'
 import { API, fetcher } from '../lib/api'
+import { haptic } from '../lib/haptic'
 
 const isUrl = (str) => str.startsWith('http://') || str.startsWith('https://')
 
@@ -122,6 +122,7 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
 
   const submitTask = async () => {
     if (!title.trim()) return
+    haptic.medium()
     const payload = {
       title: title.trim(),
       target_minutes: targetMinutes,
@@ -139,9 +140,12 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
       if (res.ok) {
         const task = await res.json()
         scheduleSwNotification(task)
+        haptic.success()
       }
       mutate(`${API}/tasks`)
-    } catch (_) {}
+    } catch (_) {
+      haptic.error()
+    }
     setTitle('')
     setTargetMinutes(90)
     setCategory(null)
@@ -155,29 +159,25 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
   }
 
   const focusTask = (task) => {
+    haptic.light()
     setActiveTask(task)
     setActiveTab('timer')
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-      className={`bg-white px-5 max-w-lg mx-auto ${embedded ? 'pt-6 pb-20' : 'min-h-screen py-12'}`}
-    >
+    <div className={`bg-[var(--color-background)] px-5 max-w-lg mx-auto ${embedded ? 'pt-6 pb-20' : 'min-h-screen py-12'}`}>
 
       {!embedded && (
         <div className="mb-8">
-          <p className="text-xs font-semibold text-[#8E8E93] uppercase tracking-widest mb-1">
+          <p className="text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest mb-1">
             Daily Planner
           </p>
-          <h1 className="text-2xl font-bold text-[#111111] tracking-tight">Aujourd'hui</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Aujourd'hui</h1>
         </div>
       )}
 
       {/* Add Task Form */}
-      <div className="bg-[#F7F7F5] rounded-2xl px-5 py-4 mb-6">
+      <div className="bg-[var(--color-secondary)] rounded-2xl px-5 py-4 mb-6">
 
         {/* Title */}
         <input
@@ -186,18 +186,19 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submitTask()}
           placeholder="Nouvelle tâche…"
-          className="w-full bg-transparent text-lg font-medium text-[#111111] placeholder-[#C7C7CC] outline-none"
+          className="w-full bg-transparent text-lg font-medium text-[var(--color-foreground)] placeholder-[var(--color-muted-foreground)]/50 outline-none"
         />
 
-        {/* Category pills */}
+        {/* Category pills — min 44px hit area */}
         <div className="flex items-center gap-1.5 mt-3 flex-wrap">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => setCategory(category === cat.id ? null : cat.id)}
+              onClick={() => { haptic.select(); setCategory(category === cat.id ? null : cat.id) }}
               className={`
-                px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all
-                ${category === cat.id ? cat.color : 'bg-white border-gray-100 text-[#8E8E93]'}
+                px-3 py-2.5 rounded-full text-[11px] font-semibold border
+                transition-all active:scale-[0.96] min-h-[36px] flex items-center
+                ${category === cat.id ? cat.color : 'bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)]'}
               `}
             >
               {cat.label}
@@ -207,54 +208,54 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
 
         {/* Scheduled date row */}
         <div className="flex items-center gap-2 mt-3">
-          <span className="text-[11px] text-[#8E8E93] font-medium">Planifié</span>
+          <span className="text-[11px] text-[var(--color-muted-foreground)] font-medium">Planifié</span>
           <button
             onClick={() => setScheduledDate(todayStr())}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${scheduledDate === todayStr() ? 'bg-[#007AFF] text-white' : 'bg-white text-[#8E8E93] border border-gray-100'}`}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[36px] transition-colors ${scheduledDate === todayStr() ? 'bg-[#007AFF] text-white' : 'bg-[var(--color-card)] text-[var(--color-muted-foreground)] border border-[var(--color-border)]'}`}
           >
             Aujourd'hui
           </button>
           <button
             onClick={() => setScheduledDate(tomorrowStr())}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${scheduledDate === tomorrowStr() ? 'bg-[#007AFF] text-white' : 'bg-white text-[#8E8E93] border border-gray-100'}`}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium min-h-[36px] transition-colors ${scheduledDate === tomorrowStr() ? 'bg-[#007AFF] text-white' : 'bg-[var(--color-card)] text-[var(--color-muted-foreground)] border border-[var(--color-border)]'}`}
           >
             Demain
           </button>
           <div className="relative flex items-center">
-            <Calendar size={12} className="absolute left-2 text-[#8E8E93] pointer-events-none" />
+            <Calendar size={12} className="absolute left-2 text-[var(--color-muted-foreground)] pointer-events-none" />
             <input
               type="date"
               value={scheduledDate}
               min={todayStr()}
               onChange={(e) => setScheduledDate(e.target.value)}
-              className={`pl-6 pr-2 py-1 rounded-lg text-[11px] font-medium border outline-none transition-colors cursor-pointer
+              className={`pl-6 pr-2 py-1.5 rounded-lg text-[11px] font-medium border outline-none transition-colors cursor-pointer
                 ${scheduledDate !== todayStr() && scheduledDate !== tomorrowStr()
                   ? 'bg-[#007AFF] text-white border-[#007AFF]'
-                  : 'bg-white text-[#8E8E93] border-gray-100'}`}
+                  : 'bg-[var(--color-card)] text-[var(--color-muted-foreground)] border-[var(--color-border)]'}`}
             />
           </div>
         </div>
 
         {/* target_minutes + reminder row */}
-        <div className="flex items-center gap-3 mt-3 border-t border-gray-200 pt-3">
+        <div className="flex items-center gap-3 mt-3 border-t border-[var(--color-border)] pt-3">
           <div className="flex items-center gap-1.5">
             <input
               type="number"
               min={1}
               value={targetMinutes}
               onChange={(e) => setTargetMinutes(Math.max(1, Number(e.target.value)))}
-              className="w-14 bg-white border border-gray-100 rounded-lg text-sm text-[#111111] font-medium text-center outline-none py-1 tabular-nums"
+              className="w-14 bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-foreground)] font-medium text-center outline-none py-1 tabular-nums"
             />
-            <span className="text-xs text-[#8E8E93]">min</span>
+            <span className="text-xs text-[var(--color-muted-foreground)]">min</span>
           </div>
 
-          {/* Reminder toggle */}
+          {/* Reminder toggle — min 44px hit area */}
           <button
             onClick={() => setShowReminder((v) => !v)}
             className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+              flex items-center gap-1.5 px-3 min-h-[44px] rounded-lg text-xs font-medium transition-colors
               active:scale-[0.96] active:opacity-70
-              ${showReminder ? 'bg-orange-50 text-orange-500' : 'bg-white text-[#8E8E93] border border-gray-100'}
+              ${showReminder ? 'bg-orange-50 text-orange-500' : 'bg-[var(--color-card)] text-[var(--color-muted-foreground)] border border-[var(--color-border)]'}
             `}
           >
             <Bell size={12} strokeWidth={2} />
@@ -266,7 +267,7 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
               type="datetime-local"
               value={reminderTime}
               onChange={(e) => setReminderTime(e.target.value)}
-              className="flex-1 bg-transparent text-xs text-[#8E8E93] outline-none"
+              className="flex-1 bg-transparent text-xs text-[var(--color-muted-foreground)] outline-none"
             />
           )}
         </div>
@@ -277,11 +278,15 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
             {newResources.map((url, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1.5 text-xs bg-white text-[#8E8E93] border border-gray-100 rounded-md px-2.5 py-1 max-w-[220px]"
+                className="inline-flex items-center gap-1.5 text-xs bg-[var(--color-card)] text-[var(--color-muted-foreground)] border border-[var(--color-border)] rounded-md px-2.5 py-1 max-w-[220px]"
               >
                 <Link size={10} strokeWidth={2} className="flex-shrink-0" />
                 <span className="truncate">{url.replace(/^https?:\/\//, '')}</span>
-                <button onClick={() => removeResource(i)} className="flex-shrink-0 hover:text-[#111111] active:opacity-70">
+                {/* Larger hit area wrapping the tiny X icon */}
+                <button
+                  onClick={() => removeResource(i)}
+                  className="flex-shrink-0 -mr-1 p-1 rounded hover:text-[var(--color-foreground)] active:opacity-70"
+                >
                   <X size={10} strokeWidth={2.5} />
                 </button>
               </span>
@@ -291,7 +296,7 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
 
         {/* URL input section */}
         {showUrlInput && (
-          <div className="mt-3 border-t border-gray-200 pt-3 space-y-2">
+          <div className="mt-3 border-t border-[var(--color-border)] pt-3 space-y-2">
             {clipboardUrl && (
               <button
                 onClick={acceptClipboardUrl}
@@ -314,31 +319,33 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
               onChange={(e) => setUrlInput(e.target.value)}
               onKeyDown={handleUrlKeyDown}
               placeholder="Ou coller une URL manuellement…"
-              className="w-full bg-transparent text-sm text-[#8E8E93] placeholder-[#C7C7CC] outline-none"
+              className="w-full bg-transparent text-sm text-[var(--color-muted-foreground)] placeholder-[var(--color-muted-foreground)]/50 outline-none"
             />
           </div>
         )}
 
         {/* Actions */}
         <div className="flex items-center justify-between mt-4">
+          {/* URL toggle — 44px hit area */}
           <button
             onClick={toggleUrlInput}
             className={`
-              w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+              w-11 h-11 rounded-lg flex items-center justify-center transition-colors
               active:scale-[0.96] active:opacity-70
-              ${showUrlInput ? 'bg-[#007AFF]/10 text-[#007AFF]' : 'text-[#8E8E93] hover:text-[#111111]'}
+              ${showUrlInput ? 'bg-[#007AFF]/10 text-[#007AFF]' : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'}
             `}
           >
             <Link size={16} strokeWidth={2} />
           </button>
 
+          {/* Submit — min 44px */}
           <button
             onClick={submitTask}
             disabled={!title.trim()}
             className={`
-              flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold
+              flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold
               transition-all active:scale-[0.97] active:opacity-70
-              ${title.trim() ? 'bg-[#007AFF] text-white' : 'bg-gray-100 text-[#C7C7CC] cursor-default'}
+              ${title.trim() ? 'bg-[#007AFF] text-white' : 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)] cursor-default'}
             `}
           >
             <Plus size={14} strokeWidth={2.5} />
@@ -350,27 +357,18 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
       {/* Active tasks */}
       {tasks && tasks.length > 0 && (
         <section className="mb-6">
-          <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest px-1 mb-3">
+          <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-3">
             En cours
           </p>
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <AnimatePresence initial={false}>
-              {tasks.map((task, i) => (
-                <motion.div
-                  key={task.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 8, height: 0 }}
-                  transition={{ type: 'spring', damping: 26, stiffness: 260, delay: i * 0.04 }}
-                >
-                  <TaskRow
-                    task={task}
-                    divider={i < tasks.length - 1}
-                    onFocus={() => focusTask(task)}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden">
+            {tasks.map((task, i) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                divider={i < tasks.length - 1}
+                onFocus={() => focusTask(task)}
+              />
+            ))}
           </div>
         </section>
       )}
@@ -378,38 +376,29 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
       {/* Completed tasks */}
       {completed && completed.length > 0 && (
         <section className="pb-4">
-          <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest px-1 mb-3">
+          <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-3">
             Terminées · {completed.length}
           </p>
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden opacity-50">
-            <AnimatePresence initial={false}>
-              {completed.map((task, i) => (
-                <motion.div
-                  key={task.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ type: 'spring', damping: 26, stiffness: 260, delay: i * 0.03 }}
-                >
-                  <TaskRow
-                    task={task}
-                    divider={i < completed.length - 1}
-                    onFocus={null}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] overflow-hidden opacity-50">
+            {completed.map((task, i) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                divider={i < completed.length - 1}
+                onFocus={null}
+              />
+            ))}
           </div>
         </section>
       )}
 
       {!tasks?.length && !completed?.length && (
         <div className="text-center py-16">
-          <p className="text-[#C7C7CC] text-sm">Aucune tâche — planifie ta journée ci-dessus.</p>
+          <p className="text-[var(--color-muted-foreground)]/60 text-sm">Aucune tâche — planifie ta journée ci-dessus.</p>
         </div>
       )}
 
-    </motion.div>
+    </div>
   )
 }
 
@@ -431,29 +420,29 @@ function TaskRow({ task, divider, onFocus }) {
   })()
 
   return (
-    <div className={`px-5 py-4 ${divider ? 'border-b border-gray-50' : ''}`}>
+    <div className={`px-5 py-4 ${divider ? 'border-b border-[var(--color-border)]/40' : ''}`}>
       <div className="flex items-start gap-3">
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 justify-between">
-            <p className="text-[15px] font-semibold text-[#111111] leading-snug truncate">
+            <p className="text-[15px] font-semibold text-[var(--color-foreground)] leading-snug truncate">
               {task.title}
             </p>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {task.category && (
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${CATEGORY_BADGE[task.category] ?? 'bg-gray-100 text-gray-500'}`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${CATEGORY_BADGE[task.category] ?? 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'}`}>
                   {CATEGORY_LABEL[task.category] ?? task.category}
                 </span>
               )}
-              <span className="text-[11px] font-semibold text-[#8E8E93] tabular-nums">
+              <span className="text-[11px] font-semibold text-[var(--color-muted-foreground)] tabular-nums">
                 {task.spent_minutes}/{task.target_minutes}m
               </span>
             </div>
           </div>
 
           {/* Progress bar */}
-          <div className="h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
+          <div className="h-1 bg-[var(--color-secondary)] rounded-full mt-2 overflow-hidden">
             <div
               className="h-full bg-[#007AFF] rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
@@ -476,7 +465,7 @@ function TaskRow({ task, divider, onFocus }) {
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs bg-[#F7F7F5] text-[#8E8E93] rounded-md px-2 py-1 hover:text-[#111111] transition-colors active:opacity-70 max-w-[180px]"
+                  className="inline-flex items-center gap-1 text-xs bg-[var(--color-secondary)] text-[var(--color-muted-foreground)] rounded-md px-2 py-1 hover:text-[var(--color-foreground)] transition-colors active:opacity-70 max-w-[180px]"
                 >
                   <ExternalLink size={10} strokeWidth={2} className="flex-shrink-0" />
                   <span className="truncate">{url.replace(/^https?:\/\//, '')}</span>
@@ -486,11 +475,11 @@ function TaskRow({ task, divider, onFocus }) {
           )}
         </div>
 
-        {/* Focus button */}
+        {/* Focus button — 44px touch target */}
         {onFocus && (
           <button
             onClick={onFocus}
-            className="mt-0.5 w-9 h-9 rounded-xl bg-[#007AFF]/10 flex items-center justify-center flex-shrink-0 transition-all active:scale-[0.90] active:opacity-70"
+            className="mt-0.5 w-11 h-11 rounded-xl bg-[#007AFF]/10 flex items-center justify-center flex-shrink-0 transition-all active:scale-[0.90] active:opacity-70"
           >
             <Play size={14} strokeWidth={0} fill="#007AFF" className="translate-x-px" />
           </button>

@@ -1,6 +1,6 @@
-const STATIC_CACHE = 'nk-static-v1'
-const API_CACHE = 'nk-api-v1'
-const STATIC_ASSETS = ['/', '/manifest.json']
+const STATIC_CACHE = 'nk-static-v2'
+const API_CACHE = 'nk-api-v2'
+const STATIC_ASSETS = ['/', '/manifest.json', '/offline.html']
 
 // Scheduled notification timers keyed by taskId
 const scheduledTimers = new Map()
@@ -31,10 +31,24 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Stale-While-Revalidate for GET API calls (matches any external API origin)
+  // Stale-While-Revalidate for GET API calls (cross-origin)
   const isSameOrigin = url.origin === self.location.origin
   if (!isSameOrigin && request.method === 'GET') {
     event.respondWith(staleWhileRevalidate(request, API_CACHE))
+    return
+  }
+
+  // Network-first for HTML navigation — fall back to offline page
+  if (request.method === 'GET' && request.headers.get('Accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          const cache = caches.open(STATIC_CACHE)
+          cache.then((c) => c.put(request, res.clone()))
+          return res
+        })
+        .catch(() => caches.match('/offline.html'))
+    )
     return
   }
 

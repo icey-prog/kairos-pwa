@@ -3,6 +3,7 @@ import { BatteryLow, Battery, BatteryMedium, BatteryFull, Zap, Check } from 'luc
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { API } from '../lib/api'
+import { haptic } from '../lib/haptic'
 
 // Solo-user display name — update when auth is added
 const DISPLAY_NAME = 'ICE.Y'
@@ -53,6 +54,7 @@ export default function MoodGate() {
 
   const handleSelect = (mood) => {
     if (confirming || exiting) return
+    haptic.medium()
     setSelected(mood.score)
     setConfirming(true)
 
@@ -83,8 +85,11 @@ export default function MoodGate() {
           initial={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: -16 }}
           transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-          className="min-h-screen bg-white flex flex-col justify-center px-6 py-12"
+          className="min-h-screen bg-[var(--color-background)] flex flex-col justify-center px-6 py-12"
         >
+          {/* Top accent bar — distinctive visual anchor */}
+          <div className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+
           <div className="max-w-sm mx-auto w-full">
 
             {/* Header */}
@@ -92,13 +97,16 @@ export default function MoodGate() {
               className="mb-10"
               animate={exiting ? { opacity: 0, y: -8 } : { opacity: 1, y: 0 }}
             >
-              <p className="text-xs font-semibold text-[#007AFF] uppercase tracking-widest mb-3">
-                Neuro-Kaizen · Check-in
-              </p>
-              <h1 className="text-[2rem] font-bold text-[#111111] leading-tight tracking-tight">
-                Bonjour {DISPLAY_NAME}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-blue-500 to-purple-500" />
+                <p className="text-xs font-semibold text-[#007AFF] uppercase tracking-widest">
+                  Neuro-Kaizen · Check-in
+                </p>
+              </div>
+              <h1 className="text-[2.25rem] font-bold text-[var(--color-foreground)] leading-tight tracking-tight">
+                Bonjour<br />{DISPLAY_NAME}
               </h1>
-              <p className="mt-3 text-[15px] text-[#8E8E93] leading-relaxed">
+              <p className="mt-3 text-[15px] text-[var(--color-muted-foreground)] leading-relaxed">
                 Ton niveau d'énergie adapte le protocole du jour.
               </p>
             </motion.div>
