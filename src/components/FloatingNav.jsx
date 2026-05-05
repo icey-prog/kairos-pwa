@@ -1,30 +1,51 @@
 import { useState, useEffect } from 'react'
-import { Timer, Brain, TrendingUp, Sparkles, CalendarDays, BookOpen, Pencil, Trophy, X, ChevronRight } from 'lucide-react'
+import { Timer, Brain, TrendingUp, Sparkles, CalendarDays, BookOpen, Pencil, Trophy, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { cn } from '../lib/utils'
 
 const QUICK_ACTIONS = [
   {
-    section: 'Focus',
-    items: [
-      { icon: Timer,       label: 'Lancer le chrono',     tab: 'focus',     sub: 'timer' },
-      { icon: CalendarDays,label: 'Planifier ma journée', tab: 'focus',     sub: 'planner' },
-    ],
+    icon: Timer,
+    label: 'Chrono',
+    sub: 'Lance le focus',
+    tab: 'focus', subtab: 'timer',
+    bg: 'bg-blue-50',    iconBg: 'bg-blue-100',    iconColor: 'text-blue-600',    textColor: 'text-blue-500',
   },
   {
-    section: 'Apprendre',
-    items: [
-      { icon: BookOpen,    label: 'Réviser mes flashcards', tab: 'learn',    sub: 'sr' },
-      { icon: Pencil,      label: 'Note Feynman',           tab: 'learn',    sub: 'feynman' },
-    ],
+    icon: CalendarDays,
+    label: 'Planifier',
+    sub: 'Organise ta journée',
+    tab: 'focus', subtab: 'planner',
+    bg: 'bg-orange-50',  iconBg: 'bg-orange-100',  iconColor: 'text-orange-600',  textColor: 'text-orange-500',
   },
   {
-    section: 'Progression',
-    items: [
-      { icon: TrendingUp,  label: 'Ma semaine',             tab: 'dashboard', sub: 'week' },
-      { icon: Trophy,      label: 'Mes hauts faits',        tab: 'dashboard', sub: 'badges' },
-    ],
+    icon: BookOpen,
+    label: 'Flashcards',
+    sub: 'Révision espacée',
+    tab: 'learn', subtab: 'sr',
+    bg: 'bg-purple-50',  iconBg: 'bg-purple-100',  iconColor: 'text-purple-600',  textColor: 'text-purple-500',
+  },
+  {
+    icon: Pencil,
+    label: 'Feynman',
+    sub: 'Explique un concept',
+    tab: 'learn', subtab: 'feynman',
+    bg: 'bg-pink-50',    iconBg: 'bg-pink-100',    iconColor: 'text-pink-600',    textColor: 'text-pink-500',
+  },
+  {
+    icon: TrendingUp,
+    label: 'Ma semaine',
+    sub: 'Progression hebdo',
+    tab: 'dashboard', subtab: 'week',
+    bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', textColor: 'text-emerald-500',
+  },
+  {
+    icon: Trophy,
+    label: 'Hauts faits',
+    sub: 'Mes badges XP',
+    tab: 'dashboard', subtab: 'badges',
+    bg: 'bg-amber-50',   iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   textColor: 'text-amber-500',
   },
 ]
 
@@ -46,9 +67,9 @@ export default function FloatingNav() {
     return () => document.removeEventListener('keydown', down)
   }, [])
 
-  const navigate = (tab, sub) => {
+  const navigate = (tab, subtab) => {
     setMainTab(tab)
-    setActiveTab(sub)
+    setActiveTab(subtab)
     setOpen(false)
   }
 
@@ -151,46 +172,32 @@ export default function FloatingNav() {
                 </button>
               </div>
 
-              {/* Actions */}
-              <div className="px-4 pb-8 space-y-4">
-                {QUICK_ACTIONS.map(({ section, items }) => (
-                  <div key={section}>
-                    <p className="text-[10px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest px-1 mb-1.5">
-                      {section}
-                    </p>
-                    <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)]/50 overflow-hidden">
-                      {items.map((item, i) => {
-                        const Icon = item.icon
-                        const isActive = mainTab === item.tab
-                        return (
-                          <button
-                            key={item.label}
-                            onClick={() => navigate(item.tab, item.sub)}
-                            className={cn(
-                              "w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all active:scale-[0.99] active:opacity-70",
-                              i > 0 && "border-t border-[var(--color-border)]/40",
-                              isActive ? "bg-[var(--color-primary)]/5" : "hover:bg-[var(--color-secondary)]/60"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
-                              isActive ? "bg-[var(--color-primary)]/15" : "bg-[var(--color-secondary)]"
-                            )}>
-                              <Icon size={17} strokeWidth={1.75} className={isActive ? "text-[var(--color-primary)]" : "text-[var(--color-foreground)]"} />
-                            </div>
-                            <span className={cn(
-                              "text-[14px] font-medium flex-1",
-                              isActive ? "text-[var(--color-primary)]" : "text-[var(--color-foreground)]"
-                            )}>
-                              {item.label}
-                            </span>
-                            <ChevronRight size={15} className="text-[var(--color-muted-foreground)] flex-shrink-0" />
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
+              {/* Actions grid */}
+              <div className="px-4 pb-8">
+                <div className="grid grid-cols-2 gap-3">
+                  {QUICK_ACTIONS.map((item) => {
+                    const Icon = item.icon
+                    const isActive = mainTab === item.tab
+                    return (
+                      <button
+                        key={item.label}
+                        onClick={() => navigate(item.tab, item.subtab)}
+                        className={cn(
+                          "flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all active:scale-[0.97] active:opacity-80",
+                          isActive ? item.bg + ' ring-1 ring-inset ring-black/5' : item.bg
+                        )}
+                      >
+                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", item.iconBg)}>
+                          <Icon size={18} strokeWidth={1.75} className={item.iconColor} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[#111] leading-tight truncate">{item.label}</p>
+                          <p className={cn("text-[11px] leading-tight mt-0.5 truncate", item.textColor)}>{item.sub}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </motion.div>
           </>
