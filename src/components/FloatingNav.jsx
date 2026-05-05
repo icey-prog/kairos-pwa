@@ -3,6 +3,7 @@ import { Timer, Brain, TrendingUp, Sparkles, CalendarDays, BookOpen, Pencil, Tro
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { cn } from '../lib/utils'
+import { haptic } from '../lib/haptic'
 
 const QUICK_ACTIONS = [
   {
@@ -68,6 +69,7 @@ export default function FloatingNav() {
   }, [])
 
   const navigate = (tab, subtab) => {
+    haptic.select()
     setMainTab(tab)
     setActiveTab(subtab)
     setOpen(false)
@@ -98,7 +100,7 @@ export default function FloatingNav() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setOpen(true)}
+                  onClick={() => { haptic.light(); setOpen(true) }}
                   className={cn(
                     "relative w-14 h-14 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all duration-200",
                     "active:scale-95",
@@ -165,8 +167,8 @@ export default function FloatingNav() {
               <div className="flex items-center justify-between px-5 py-3">
                 <h2 className="text-[15px] font-bold text-[var(--color-foreground)]">Accès rapide</h2>
                 <button
-                  onClick={() => setOpen(false)}
-                  className="w-8 h-8 rounded-full bg-[var(--color-secondary)] flex items-center justify-center text-[var(--color-muted-foreground)] active:scale-95 transition-transform"
+                  onClick={() => { haptic.light(); setOpen(false) }}
+                  className="w-11 h-11 rounded-full bg-[var(--color-secondary)] flex items-center justify-center text-[var(--color-muted-foreground)] active:scale-95 transition-transform"
                 >
                   <X size={15} strokeWidth={2} />
                 </button>

@@ -17,14 +17,15 @@ import {
 import useStore from '../store/useStore'
 import { API, fetcher } from '../lib/api'
 import { isCompleted, getProgress } from '../lib/taskBridge'
+import { haptic } from '../lib/haptic'
 import ThemeToggle from './ThemeToggle'
 
 const CATEGORY_COLORS = {
-  dev:      { bg: 'bg-blue-500/10',   text: 'text-blue-600',   label: 'Dev' },
-  learn:    { bg: 'bg-purple-500/10', text: 'text-purple-600', label: 'Learn' },
-  health:   { bg: 'bg-orange-500/10', text: 'text-orange-600', label: 'Santé' },
-  personal: { bg: 'bg-gray-500/10',   text: 'text-gray-600',   label: 'Perso' },
-  project:  { bg: 'bg-amber-500/10',  text: 'text-amber-600',  label: 'Projet' },
+  dev:      { bg: 'bg-blue-500/10',   text: 'text-blue-600',   label: 'Dev',   accent: '#3b82f6' },
+  learn:    { bg: 'bg-purple-500/10', text: 'text-purple-600', label: 'Learn', accent: '#8b5cf6' },
+  health:   { bg: 'bg-orange-500/10', text: 'text-orange-600', label: 'Santé', accent: '#f97316' },
+  personal: { bg: 'bg-gray-500/10',   text: 'text-gray-600',   label: 'Perso', accent: '#9ca3af' },
+  project:  { bg: 'bg-amber-500/10',  text: 'text-amber-600',  label: 'Projet',accent: '#f59e0b' },
 }
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
@@ -100,9 +101,11 @@ export default function Arena() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: xpGain, reason: task.title.slice(0, 100) }),
       })
+      haptic.success()
       mutate(`${API}/tasks?date=${todayStr()}`)
       mutate(`${API}/xp/balance`)
     } catch (err) {
+      haptic.error()
       console.error('[completeTask]', err)
     } finally {
       completing.current.delete(task.id)
@@ -111,10 +114,14 @@ export default function Arena() {
 
   const redeemReward = async (reward) => {
     if (redeeming || xpBalance < reward.cost) return
+    haptic.medium()
     setRedeeming(reward.id)
     try {
       const res = await fetch(`${API}/rewards/redeem/${reward.id}`, { method: 'POST' })
-      if (res.ok) mutate(`${API}/xp/balance`)
+      if (res.ok) {
+        haptic.success()
+        mutate(`${API}/xp/balance`)
+      }
     } finally {
       setRedeeming(null)
     }
@@ -158,12 +165,12 @@ export default function Arena() {
             </div>
 
             {/* XP Balance */}
-            <div className="flex items-center gap-1.5 bg-[var(--color-primary)]/10 px-4 py-2.5 rounded-xl">
-              <Zap size={13} className="text-[var(--color-primary)]" strokeWidth={2.5} />
-              <span className="text-[var(--color-primary)] font-bold text-[18px] tabular-nums leading-none">
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-4 py-2.5 rounded-xl">
+              <Zap size={13} strokeWidth={2.5} className="text-blue-500" />
+              <span className="text-gradient-xp font-bold text-[18px] tabular-nums leading-none">
                 {xpBalance.toLocaleString()}
               </span>
-              <span className="text-[var(--color-primary)]/60 text-xs font-semibold">XP</span>
+              <span className="text-purple-400/70 text-xs font-semibold">XP</span>
             </div>
           </div>
 
@@ -245,11 +252,12 @@ export default function Arena() {
                         onClick={() => completeTask(task)}
                         disabled={done}
                         className={`
-                          w-full flex items-center gap-4 px-5 min-h-[68px] text-left
-                          transition-all duration-150 active:scale-[0.99] active:opacity-70
-                          ${i < todayTasks.length - 1 ? 'border-b border-[var(--color-border)]/60' : ''}
-                          ${done ? 'cursor-default' : 'hover:bg-[var(--color-secondary)]/60'}
+                          w-full flex items-center gap-4 pl-[17px] pr-5 min-h-[68px] text-left
+                          border-l-[3px] transition-all duration-150 active:scale-[0.99] active:opacity-70
+                          ${i < todayTasks.length - 1 ? 'border-b border-b-[var(--color-border)]/60' : ''}
+                          ${done ? 'cursor-default opacity-60' : 'hover:bg-[var(--color-secondary)]/60'}
                         `}
+                        style={{ borderLeftColor: done ? '#10b981' : (cat?.accent ?? 'transparent') }}
                       >
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${done ? 'bg-emerald-50' : 'bg-[var(--color-secondary)]'}`}>
                           {done

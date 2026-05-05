@@ -4,6 +4,7 @@ import MoodGate from './components/MoodGate'
 import Arena from './components/Arena'
 import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
+import { toast } from 'sonner'
 import FloatingNav from './components/FloatingNav'
 import { API } from './lib/api'
 import { adaptTask } from './lib/taskBridge'
@@ -47,7 +48,20 @@ export default function App() {
 
     // Register SW + listen for FOCUS_TASK messages from notificationclick
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const next = reg.installing
+          next?.addEventListener('statechange', () => {
+            if (next.state === 'installed' && navigator.serviceWorker.controller) {
+              toast.info('Mise à jour disponible', {
+                description: 'Recharge la page pour appliquer.',
+                action: { label: 'Recharger', onClick: () => window.location.reload() },
+                duration: 12000,
+              })
+            }
+          })
+        })
+      }).catch(() => {})
 
       const handler = (event) => {
         if (event.data?.type === 'FOCUS_TASK' && event.data.taskId) {
