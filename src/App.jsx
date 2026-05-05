@@ -1,15 +1,32 @@
 import { useEffect } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import useStore from './store/useStore'
 import MoodGate from './components/MoodGate'
 import Arena from './components/Arena'
 import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 import FloatingNav from './components/FloatingNav'
+import { API } from './lib/api'
+import { adaptTask } from './lib/taskBridge'
 
 export default function App() {
   const moodLogged = useStore((s) => s.moodLogged)
   const setMood = useStore((s) => s.setMood)
+  const setActiveTask = useStore((s) => s.setActiveTask)
+  const setMainTab = useStore((s) => s.setMainTab)
+  const setActiveTab = useStore((s) => s.setActiveTab)
+
+  // Focus a task by id: fetch tasks list, find it, activate it, navigate
+  const focusTaskById = async (taskId) => {
+    try {
+      const tasks = await fetch(`${API}/tasks`).then((r) => r.json())
+      const found = tasks.find((t) => String(t.id) === String(taskId))
+      if (found) {
+        setActiveTask(adaptTask(found))
+        setMainTab('focus')
+        setActiveTab('timer')
+      }
+    } catch (_) {}
+  }
 
   useEffect(() => {
     // Check if mood was already logged today
@@ -20,38 +37,33 @@ export default function App() {
       setMood(score)
     }
 
-    // Enregistrement du Service Worker PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => { })
+    // Handle ?focus=taskId in URL (app opened via notification when it was closed)
+    const params = new URLSearchParams(window.location.search)
+    const focusId = params.get('focus')
+    if (focusId) {
+      window.history.replaceState({}, '', window.location.pathname)
+      focusTaskById(focusId)
     }
+
+    // Register SW + listen for FOCUS_TASK messages from notificationclick
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+
+      const handler = (event) => {
+        if (event.data?.type === 'FOCUS_TASK' && event.data.taskId) {
+          focusTaskById(event.data.taskId)
+        }
+      }
+      navigator.serviceWorker.addEventListener('message', handler)
+      return () => navigator.serviceWorker.removeEventListener('message', handler)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setMood])
 
   return (
     <>
       <ErrorBoundary>
-        <AnimatePresence mode="wait">
-          {moodLogged ? (
-            <motion.div
-              key="arena"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-            >
-              <Arena />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="moodgate"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96, y: -16 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-            >
-              <MoodGate />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {moodLogged ? <Arena /> : <MoodGate />}
       </ErrorBoundary>
       <FloatingNav />
       <Toaster position="bottom-right" />

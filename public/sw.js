@@ -2,6 +2,9 @@ const STATIC_CACHE = 'nk-static-v1'
 const API_CACHE = 'nk-api-v1'
 const STATIC_ASSETS = ['/', '/manifest.json']
 
+// Scheduled notification timers keyed by taskId
+const scheduledTimers = new Map()
+
 // Install: pre-cache static shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -41,6 +44,56 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => cached || fetch(request))
     )
   }
+})
+
+// Schedule / cancel notifications from the page
+self.addEventListener('message', (event) => {
+  const { type, taskId, title, reminderTime } = event.data || {}
+
+  if (type === 'SCHEDULE_NOTIFICATION') {
+    const delay = new Date(reminderTime).getTime() - Date.now()
+    if (delay <= 0) return
+
+    if (scheduledTimers.has(taskId)) clearTimeout(scheduledTimers.get(taskId))
+
+    const timerId = setTimeout(() => {
+      self.registration.showNotification('⏰ ' + title, {
+        body: 'Heure de commencer — lance le chrono',
+        icon: '/logo_kaizen.jpg',
+        badge: '/logo_kaizen.jpg',
+        tag: `task-${taskId}`,
+        data: { taskId },
+        actions: [{ action: 'start', title: '▶ Démarrer' }],
+        requireInteraction: true,
+      })
+      scheduledTimers.delete(taskId)
+    }, delay)
+
+    scheduledTimers.set(taskId, timerId)
+  }
+
+  if (type === 'CANCEL_NOTIFICATION') {
+    if (scheduledTimers.has(taskId)) {
+      clearTimeout(scheduledTimers.get(taskId))
+      scheduledTimers.delete(taskId)
+    }
+  }
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const { taskId } = event.notification.data || {}
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        clientList[0].focus()
+        clientList[0].postMessage({ type: 'FOCUS_TASK', taskId })
+      } else {
+        clients.openWindow(taskId ? `/?focus=${taskId}` : '/')
+      }
+    })
+  )
 })
 
 async function staleWhileRevalidate(request, cacheName) {

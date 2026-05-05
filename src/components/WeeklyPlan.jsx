@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Calendar, ChevronLeft, ChevronRight, Clock,
-  CheckCircle2, TrendingUp,
+  CheckCircle2, TrendingUp, Plus,
 } from 'lucide-react'
 import { format, addWeeks, subWeeks, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -11,20 +11,29 @@ import { Card, CardContent, Button } from '../lib/ui'
 import { cn } from '../lib/utils'
 import { API, fetcher } from '../lib/api'
 import { isCompleted, getProgress } from '../lib/taskBridge'
+import useStore from '../store/useStore'
 
-// Get category dot color based on task title semantic
-function getCategoryColor(title) {
-  const t = title.toLowerCase()
-  if (t.includes('code') || t.includes('dev') || t.includes('bug') || t.includes('arch')) return 'bg-blue-400'
-  if (t.includes('sport') || t.includes('cardio') || t.includes('gym')) return 'bg-orange-400'
-  if (t.includes('review') || t.includes('read') || t.includes('learn')) return 'bg-purple-400'
-  if (t.includes('feynman') || t.includes('flash') || t.includes('card')) return 'bg-emerald-400'
-  return 'bg-[var(--color-primary)]' // default
+const CATEGORY_DOT = {
+  dev:      'bg-blue-400',
+  learn:    'bg-purple-400',
+  health:   'bg-orange-400',
+  personal: 'bg-gray-400',
+  project:  'bg-amber-400',
 }
 
-export default function WeeklyPlan() {
+function getCategoryDot(task) {
+  if (task.category && CATEGORY_DOT[task.category]) return CATEGORY_DOT[task.category]
+  const t = task.title.toLowerCase()
+  if (t.includes('code') || t.includes('dev') || t.includes('bug')) return 'bg-blue-400'
+  if (t.includes('sport') || t.includes('cardio') || t.includes('gym')) return 'bg-orange-400'
+  if (t.includes('review') || t.includes('read') || t.includes('learn')) return 'bg-purple-400'
+  return 'bg-[var(--color-primary)]'
+}
+
+export default function WeeklyPlan({ onAddTask }) {
   const completing = useRef(new Set()) // double-submit guard
   const [currentWeek, setCurrentWeek] = useState(new Date())
+  const setActiveTab = useStore((s) => s.setActiveTab)
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 })
@@ -63,16 +72,18 @@ export default function WeeklyPlan() {
     }
   }
 
-  // Group tasks by creation date matching the weekday
   const tasksByDay = weekDays.map((day) => ({
     date: day,
     dayName: format(day, 'EEE', { locale: fr }),
     dayNumber: format(day, 'd'),
     month: format(day, 'MMM', { locale: fr }),
     isToday: isSameDay(day, new Date()),
+    dateStr: format(day, 'yyyy-MM-dd'),
     tasks: tasks.filter((t) => {
-      const taskDate = t.created_at ? new Date(t.created_at) : new Date()
-      return isSameDay(taskDate, day)
+      const d = t.scheduled_date
+        ? new Date(t.scheduled_date + 'T00:00:00')
+        : t.created_at ? new Date(t.created_at) : null
+      return d ? isSameDay(d, day) : false
     }),
   }))
 
@@ -169,12 +180,12 @@ export default function WeeklyPlan() {
 
             {/* Tasks */}
             <div className="p-2 space-y-1.5 min-h-[120px]">
-              {day.tasks.length === 0 ? (
-                <div className="text-center py-6">
+              {day.tasks.length === 0 && (
+                <div className="text-center py-4">
                   <p className="text-[10px] text-[var(--color-muted-foreground)]">Repos</p>
                 </div>
-              ) : (
-                day.tasks.map((task) => {
+              )}
+              {day.tasks.map((task) => {
                   const done = isCompleted(task)
                   const progress = getProgress(task)
                   return (
@@ -191,7 +202,7 @@ export default function WeeklyPlan() {
                       onClick={() => completeTask(task)}
                     >
                       <div className="flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", getCategoryColor(task.title))} />
+                        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", getCategoryDot(task))} />
                         <p className={cn('font-medium truncate text-[var(--color-foreground)]', done && 'line-through opacity-60')}>
                           {task.title}
                         </p>
@@ -208,8 +219,20 @@ export default function WeeklyPlan() {
                       </div>
                     </motion.div>
                   )
-                })
-              )}
+                })}
+              <button
+                onClick={() => {
+                  if (onAddTask) {
+                    onAddTask(day.dateStr)
+                  } else {
+                    setActiveTab('planner')
+                  }
+                }}
+                className="w-full mt-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all"
+              >
+                <Plus className="w-3 h-3" />
+                Tâche
+              </button>
             </div>
           </motion.div>
         ))}

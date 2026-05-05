@@ -1,101 +1,53 @@
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# CLAUDE.md
 
-This project is indexed by GitNexus as **Mile** (118 symbols, 173 relationships, 1 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+## Stack
 
-## Always Do
+- **Frontend**: Vite 6 + React 19, Tailwind v4, Zustand (state), SWR (fetch), Radix UI primitives, framer-motion, sonner.
+- **Backend**: FastAPI + SQLModel + SQLite (`./neuro_kaizen.db`), `slowapi` rate limiting.
+- **PWA**: hand-written service worker at `public/sw.js`; manifest at `public/manifest.json`. Registered from `src/App.jsx`.
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+> Heads-up: `ARCHITECTURE.md` describes the codebase as Next.js Pages Router with files under `pages/`, `components/`, `store/`, `lib/`. That is **stale**. The frontend is a Vite SPA; all sources live under `src/`. The execution-flow narratives in ARCHITECTURE.md are still accurate — only the file paths are wrong.
 
-## When Debugging
+## Commands
 
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/Mile/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
+Frontend (from repo root):
+- `npm run dev` — Vite dev server on `:5173`
+- `npm run build` — production bundle to `dist/`
+- `npm run preview` — serve built bundle
 
-## When Refactoring
+Backend (from repo root, with venv active):
+- `pip install -r requirements.txt`
+- `uvicorn main:app --reload` — API on `:8000`
 
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
+No test runner is configured. `tests/` contains only a placeholder file.
 
-## Never Do
+## Environment
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+- `VITE_API_URL` (frontend) — base URL for API calls. Defaults to `http://localhost:8000/api`. Set this in Vercel/Render for deployed frontends to point at the deployed backend.
+- Backend CORS allows `http://localhost:3000` and `http://localhost:5173`. Add deployed origins in `main.py` when shipping.
 
-## Tools Quick Reference
+## Architecture (big picture)
 
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
+Single-user local-first PWA. No auth layer. Two processes communicate over plain HTTP REST.
 
-## Impact Risk Levels
+**Routing decision is one line in `src/App.jsx`**: `moodLogged ? <Arena/> : <MoodGate/>`. Daily mood is gated, persisted in `localStorage` (`mile_last_mood_date`, `mile_last_mood_score`), and rehydrated on mount.
 
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
+**Global state lives in `src/store/useStore.js` (Zustand)** — single source of truth for `moodLogged`, `currentMood`, `xpBalance`, `activeTask`, `activeTab`. Components read slices; cross-tab coordination (Planner → Timer handoff) flows through `setActiveTask` + `setActiveTab`.
 
-## Resources
+**Arena keeps both Timer and Planner mounted** (inactive tab gets Tailwind `hidden`) so the Pomodoro countdown survives tab switches.
 
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/Mile/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/Mile/clusters` | All functional areas |
-| `gitnexus://repo/Mile/processes` | All execution flows |
-| `gitnexus://repo/Mile/process/{name}` | Step-by-step execution trace |
+**Task completion is derived, not flagged** — backend exposes `GET /api/tasks` (active, `spent < target`) and `GET /api/tasks/completed` (`spent >= target`). On Timer completion: `PATCH /api/tasks/{id}/add_time` → `mutate('/api/tasks')` + `mutate('/api/tasks/completed')` → `POST /api/xp` (+50). See `src/lib/taskBridge.js` for the derivation helpers (`isCompleted`, `getProgress`, `adaptTask`).
 
-## Self-Check Before Finishing
+**XP is event-sourced** — no denormalized balance. `GET /api/xp/balance` runs `SUM(amount)`. Reward redemption inserts a negative `XpTransaction` inside a nested transaction with re-read balance check (TOCTOU guard in `redeem_reward`, `main.py:99`).
 
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
+**API base URL** is centralized in `src/lib/api.js` (`API` const + `fetcher`). Always import from there — don't hardcode URLs in components.
 
-## Keeping the Index Fresh
+**Service worker strategy**: stale-while-revalidate for `:8000` GETs, cache-first for static assets. Mutations on offline are silently swallowed by component-level catches — UI may drift from DB until reload.
 
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
+For full functional-area breakdown, execution flows, and the mermaid diagram, see `ARCHITECTURE.md` (mind the path drift noted above).
 
-```bash
-npx gitnexus analyze
-```
+## GitNexus
 
-If the index previously included embeddings, preserve them by adding `--embeddings`:
-
-```bash
-npx gitnexus analyze --embeddings
-```
-
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
-
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+This repo is indexed by GitNexus as `Mile`. Full rules in `AGENTS.md`. Short version: before editing any function/class, run `gitnexus_impact({target, direction: "upstream"})`; before committing, run `gitnexus_detect_changes()`; for renames use `gitnexus_rename` (dry-run first), never find-and-replace. After commits, the index is refreshed via PostToolUse hook (`npx gitnexus analyze`).

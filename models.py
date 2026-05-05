@@ -48,6 +48,8 @@ class Task(SQLModel, table=True):
     target_minutes: int = Field(default=90, ge=1)
     spent_minutes: int = Field(default=0, ge=0)
     reminder_time: Optional[datetime] = Field(default=None)
+    category: Optional[str] = Field(default=None, max_length=50)  # dev|learn|health|personal|project
+    scheduled_date: Optional[str] = Field(default=None, max_length=10)  # YYYY-MM-DD
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -56,6 +58,17 @@ class TaskCreate(SQLModel):
     resources: Optional[str] = Field(default=None, max_length=2000)
     target_minutes: int = Field(default=90, ge=1)
     reminder_time: Optional[datetime] = None
+    category: Optional[str] = Field(default=None, max_length=50)
+    scheduled_date: Optional[str] = Field(default=None, max_length=10)
+
+
+class TaskUpdate(SQLModel):
+    title: Optional[str] = Field(default=None, max_length=200)
+    resources: Optional[str] = Field(default=None, max_length=2000)
+    target_minutes: Optional[int] = Field(default=None, ge=1)
+    reminder_time: Optional[datetime] = None
+    category: Optional[str] = Field(default=None, max_length=50)
+    scheduled_date: Optional[str] = Field(default=None, max_length=10)
 
 
 class AddTimePayload(SQLModel):

@@ -1,6 +1,7 @@
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +24,7 @@ from models import (
     SpacedCardUpdate,
     Task,
     TaskCreate,
+    TaskUpdate,
     XpTransaction,
     XpTransactionCreate,
 )
@@ -41,9 +43,15 @@ app = FastAPI(title="Neuro-Kaizen API", version="1.0.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+_extra_origin = os.environ.get("FRONTEND_URL", "")
+_allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+] + ([_extra_origin] if _extra_origin else [])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=_allowed_origins,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
@@ -141,12 +149,12 @@ def create_task(payload: TaskCreate, session: Session = Depends(get_session)):
 
 
 @app.get("/api/tasks", response_model=List[Task])
-def list_active_tasks(session: Session = Depends(get_session)):
-    """Tasks where spent_minutes < target_minutes (active feed)."""
-    tasks = session.exec(
-        select(Task).where(Task.spent_minutes < Task.target_minutes)
-    ).all()
-    return tasks
+def list_active_tasks(date: Optional[str] = None, session: Session = Depends(get_session)):
+    """Tasks where spent_minutes < target_minutes. Filter by scheduled_date with ?date=YYYY-MM-DD."""
+    q = select(Task).where(Task.spent_minutes < Task.target_minutes)
+    if date:
+        q = q.where(Task.scheduled_date == date)
+    return session.exec(q).all()
 
 
 @app.get("/api/tasks/completed", response_model=List[Task])
@@ -169,6 +177,19 @@ def add_time_to_task(
         raise HTTPException(status_code=404, detail="Task not found.")
 
     task.spent_minutes += payload.minutes
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
+
+
+@app.put("/api/tasks/{task_id}", response_model=Task)
+def update_task(task_id: int, payload: TaskUpdate, session: Session = Depends(get_session)):
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    for k, v in payload.model_dump(exclude_unset=True).items():
+        setattr(task, k, v)
     session.add(task)
     session.commit()
     session.refresh(task)
