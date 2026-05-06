@@ -8,11 +8,11 @@ import { adaptTask } from '../lib/taskBridge'
 import { toast } from 'sonner'
 
 const CATEGORY_COLORS = {
-  dev:      'bg-blue-500/15 text-blue-600',
-  learn:    'bg-purple-500/15 text-purple-600',
-  health:   'bg-orange-500/15 text-orange-600',
-  personal: 'bg-gray-500/15 text-gray-600',
-  project:  'bg-amber-500/15 text-amber-600',
+  dev:      'bg-blue-500/15 text-blue-500',
+  learn:    'bg-purple-500/15 text-purple-500',
+  health:   'bg-orange-500/15 text-orange-500',
+  personal: 'bg-gray-500/15 text-[var(--color-muted-foreground)]',
+  project:  'bg-amber-500/15 text-amber-500',
 }
 const CATEGORY_LABELS = {
   dev: 'Dev', learn: 'Learn', health: 'Santé', personal: 'Perso', project: 'Projet',
@@ -54,7 +54,6 @@ export default function InterleavingTimer({ onSessionComplete }) {
     setIsRunning(false)
 
     if (phase === 'focus') {
-      // Log time on the active task
       if (activeTask) {
         try {
           await fetch(`${API}/tasks/${activeTask.id}/add_time`, {
@@ -113,14 +112,14 @@ export default function InterleavingTimer({ onSessionComplete }) {
       {/* Active task / task picker */}
       {activeTask ? (
         <div className="flex flex-col items-center mb-5 px-4 text-center w-full">
-          <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest mb-1">
+          <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest mb-1">
             Tâche active
           </p>
-          <p className="text-[15px] font-semibold text-[#111111] leading-snug">
+          <p className="text-[15px] font-semibold text-[var(--color-foreground)] leading-snug">
             {activeTask.title}
           </p>
           {/* Task progress bar */}
-          <div className="w-40 h-1 bg-gray-100 rounded-full mt-2.5 overflow-hidden">
+          <div className="w-40 h-1 bg-[var(--color-secondary)] rounded-full mt-2.5 overflow-hidden">
             <div
               className="h-full bg-[#007AFF] rounded-full"
               style={{
@@ -128,25 +127,25 @@ export default function InterleavingTimer({ onSessionComplete }) {
               }}
             />
           </div>
-          <p className="text-[11px] text-[#8E8E93] mt-1 tabular-nums">
+          <p className="text-[11px] text-[var(--color-muted-foreground)] mt-1 tabular-nums">
             {activeTask.spent_minutes}/{activeTask.target_minutes} min
           </p>
           <button
             onClick={() => setActiveTask(null)}
-            className="mt-2 text-[11px] text-[#8E8E93] hover:text-[#007AFF] transition-colors"
+            className="mt-2 text-[11px] text-[var(--color-muted-foreground)] hover:text-[#007AFF] transition-colors"
           >
             Changer de tâche
           </button>
         </div>
       ) : (
         <div className="w-full px-4 mb-5">
-          <p className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-widest mb-2 text-center">
+          <p className="text-[11px] font-semibold text-[var(--color-muted-foreground)] uppercase tracking-widest mb-2 text-center">
             Choisir une tâche
           </p>
           {tasks.length === 0 ? (
             <button
               onClick={() => setActiveTab('planner')}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#F7F7F5] text-[13px] text-[#8E8E93] hover:text-[#007AFF] hover:bg-[#007AFF]/5 transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--color-secondary)] text-[13px] text-[var(--color-muted-foreground)] hover:text-[#007AFF] hover:bg-[#007AFF]/5 transition-all"
             >
               <span>Crée une tâche dans Quêtes</span>
               <ChevronRight size={14} />
@@ -157,22 +156,22 @@ export default function InterleavingTimer({ onSessionComplete }) {
                 <button
                   key={task.id}
                   onClick={() => setActiveTask(adaptTask(task))}
-                  className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl bg-[#F7F7F5] hover:bg-[#007AFF]/8 transition-all text-left group"
+                  className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl bg-[var(--color-secondary)] hover:bg-[#007AFF]/8 transition-all text-left group"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[#111111] truncate group-hover:text-[#007AFF]">
+                    <p className="text-[13px] font-medium text-[var(--color-foreground)] truncate group-hover:text-[#007AFF]">
                       {task.title}
                     </p>
-                    <p className="text-[11px] text-[#8E8E93] tabular-nums">
+                    <p className="text-[11px] text-[var(--color-muted-foreground)] tabular-nums">
                       {task.spent_minutes}/{task.target_minutes} min
                     </p>
                   </div>
                   {task.category && (
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[task.category] ?? 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[task.category] ?? 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'}`}>
                       {CATEGORY_LABELS[task.category] ?? task.category}
                     </span>
                   )}
-                  <ChevronRight size={14} className="text-[#C7C7CC] group-hover:text-[#007AFF] flex-shrink-0" />
+                  <ChevronRight size={14} className="text-[var(--color-muted-foreground)] group-hover:text-[#007AFF] flex-shrink-0" />
                 </button>
               ))}
             </div>
@@ -189,14 +188,14 @@ export default function InterleavingTimer({ onSessionComplete }) {
           {isFocus ? `Focus · ${currentSubject}` : 'Pause'}
         </span>
         {sessionCount > 0 && (
-          <span className="text-xs text-[#8E8E93]">Session {sessionCount}</span>
+          <span className="text-xs text-[var(--color-muted-foreground)]">Session {sessionCount}</span>
         )}
       </div>
 
       {/* Ring */}
       <div className="relative flex items-center justify-center mb-8">
         <svg width={176} height={176} className="-rotate-90">
-          <circle cx={88} cy={88} r={RADIUS} fill="none" stroke="#F7F7F5" strokeWidth={6} />
+          <circle cx={88} cy={88} r={RADIUS} fill="none" style={{ stroke: 'var(--color-secondary)' }} strokeWidth={6} />
           <circle
             cx={88} cy={88} r={RADIUS}
             fill="none"
@@ -217,10 +216,10 @@ export default function InterleavingTimer({ onSessionComplete }) {
             </div>
           ) : (
             <>
-              <span className="text-[40px] font-bold text-[#111111] tabular-nums leading-none tracking-tight">
+              <span className="text-[40px] font-bold text-[var(--color-foreground)] tabular-nums leading-none tracking-tight">
                 {fmt(timeLeft)}
               </span>
-              <span className="text-xs text-[#8E8E93] mt-1 font-medium">
+              <span className="text-xs text-[var(--color-muted-foreground)] mt-1 font-medium">
                 {isFocus ? 'minutes de focus' : 'repose-toi'}
               </span>
             </>
@@ -232,7 +231,7 @@ export default function InterleavingTimer({ onSessionComplete }) {
       <div className="flex items-center gap-4">
         <button
           onClick={reset}
-          className="w-11 h-11 rounded-full bg-[#F7F7F5] flex items-center justify-center text-[#8E8E93] transition-all active:scale-[0.92] active:opacity-70"
+          className="w-11 h-11 rounded-full bg-[var(--color-secondary)] flex items-center justify-center text-[var(--color-muted-foreground)] transition-all active:scale-[0.92] active:opacity-70"
         >
           <RotateCcw size={16} strokeWidth={2} />
         </button>
@@ -251,9 +250,9 @@ export default function InterleavingTimer({ onSessionComplete }) {
           }
         </button>
 
-        <div className="w-11 h-11 rounded-full bg-[#F7F7F5] flex flex-col items-center justify-center gap-0.5">
-          <span className="text-[9px] text-[#8E8E93] font-medium uppercase tracking-wide leading-none">Next</span>
-          <span className="text-[11px] font-semibold text-[#111111] leading-none">
+        <div className="w-11 h-11 rounded-full bg-[var(--color-secondary)] flex flex-col items-center justify-center gap-0.5">
+          <span className="text-[9px] text-[var(--color-muted-foreground)] font-medium uppercase tracking-wide leading-none">Next</span>
+          <span className="text-[11px] font-semibold text-[var(--color-foreground)] leading-none">
             {subjects[(sessionCount + (isFocus ? 1 : 0)) % subjects.length]}
           </span>
         </div>
@@ -263,8 +262,15 @@ export default function InterleavingTimer({ onSessionComplete }) {
       <div className="flex items-center gap-3 mt-6">
         {subjects.map((s, i) => (
           <div key={s} className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${i === sessionCount % subjects.length && isFocus ? 'bg-[#007AFF]' : 'bg-gray-200'}`} />
-            <span className={`text-xs font-medium ${i === sessionCount % subjects.length && isFocus ? 'text-[#111111]' : 'text-[#8E8E93]'}`}>
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: i === sessionCount % subjects.length && isFocus
+                  ? '#007AFF'
+                  : 'var(--color-border)',
+              }}
+            />
+            <span className={`text-xs font-medium ${i === sessionCount % subjects.length && isFocus ? 'text-[var(--color-foreground)]' : 'text-[var(--color-muted-foreground)]'}`}>
               {s}
             </span>
           </div>
