@@ -18,7 +18,6 @@ import useStore from '../store/useStore'
 import { API, fetcher } from '../lib/api'
 import { isCompleted, getProgress } from '../lib/taskBridge'
 import { haptic } from '../lib/haptic'
-import ThemeToggle from './ThemeToggle'
 
 const CATEGORY_COLORS = {
   dev:      { bg: 'bg-blue-500/10',   text: 'text-blue-600',   label: 'Dev',   accent: '#3b82f6' },
@@ -391,9 +390,6 @@ export default function Arena() {
           </div>
         </div>
       </Suspense>
-
-      {/* Theme toggle — fixed bottom right */}
-      <ThemeToggle />
 
     </div>
   )

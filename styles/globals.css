@@ -27,51 +27,45 @@ html, body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* ─── Glass mode: override all theme tokens ───────────────────────────────── */
-.glass-mode {
-  --color-primary:             #7c3aed;
+/* ─── Dark mode: clean iOS-inspired dark ──────────────────────────────────── */
+.dark-mode {
+  --color-primary:             #007aff;
   --color-primary-foreground:  #ffffff;
-  --color-secondary:           rgba(255, 255, 255, 0.06);
-  --color-secondary-foreground:#f8f8f8;
-  --color-muted:               #1a1a1a;
-  --color-muted-foreground:    #888888;
+  --color-secondary:           #2c2c2e;
+  --color-secondary-foreground:#f0f0f0;
+  --color-muted:               #2c2c2e;
+  --color-muted-foreground:    #8e8e93;
   --color-border:              rgba(255, 255, 255, 0.1);
-  --color-card:                rgba(255, 255, 255, 0.04);
-  --color-card-foreground:     #f8f8f8;
-  --color-background:          #0d0d0d;
-  --color-foreground:          #f8f8f8;
-  --color-accent:              rgba(255, 255, 255, 0.08);
-  --color-accent-foreground:   #f8f8f8;
+  --color-card:                #1c1c1e;
+  --color-card-foreground:     #f0f0f0;
+  --color-background:          #0f0f0f;
+  --color-foreground:          #f0f0f0;
+  --color-accent:              #3a3a3c;
+  --color-accent-foreground:   #f0f0f0;
 }
 
 /* ─── Glass utility classes ───────────────────────────────────────────────── */
-/* Standards Cards (Content layer: minimal blur per Liquid Glass guidelines) */
 .glass {
   background: var(--color-card);
   border-radius: 1rem;
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.glass-mode .glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(8px) saturate(120%);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.dark-mode .glass {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
 }
 
-/* Navigation & Dialogs (Functional layer: True Liquid Glass effect) */
 .glass-strong {
   background: var(--color-secondary);
   border-radius: 1rem;
   transition: background 0.3s ease;
 }
 
-.glass-mode .glass-strong {
-  background: rgba(255, 255, 255, 0.08); /* slightly higher visibility for nav */
-  backdrop-filter: blur(40px) saturate(200%); /* Extreme blur + saturation = Liquid Glass */
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.2);
+.dark-mode .glass-strong {
+  background: var(--color-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 /* ─── Card hover lift ─────────────────────────────────────────────────────── */
@@ -82,7 +76,7 @@ html, body {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
-.glass-mode .card-hover:hover {
+.dark-mode .card-hover:hover {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
@@ -130,6 +124,6 @@ html, body {
   pointer-events: none;
   z-index: 0;
 }
-.glass-mode #root::before {
+.dark-mode #root::before {
   background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
 }

@@ -13,11 +13,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
   const [theme, setTheme] = useState("light")
 
   useEffect(() => {
-    const isGlass = document.documentElement.classList.contains('glass-mode')
+    const isGlass = document.documentElement.classList.contains('dark-mode')
     setTheme(isGlass ? "dark" : "light")
 
     const observer = new MutationObserver(() => {
-      const isGlassNow = document.documentElement.classList.contains('glass-mode')
+      const isGlassNow = document.documentElement.classList.contains('dark-mode')
       setTheme(isGlassNow ? "dark" : "light")
     })
 
