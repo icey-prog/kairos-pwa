@@ -134,7 +134,7 @@ export default function MoodGate() {
                       min-h-[64px] transition-all duration-200
                       ${isSelected
                         ? 'bg-[#007AFF] border-[#007AFF]'
-                        : 'bg-[#F7F7F5] border-transparent'
+                        : 'bg-[var(--color-secondary)] border-transparent'
                       }
                     `}
                   >
@@ -144,10 +144,10 @@ export default function MoodGate() {
                       className={isSelected ? 'text-white' : mood.color}
                     />
                     <div className="flex flex-col items-start text-left">
-                      <span className={`text-[15px] font-semibold ${isSelected ? 'text-white' : 'text-[#111111]'}`}>
+                      <span className={`text-[15px] font-semibold ${isSelected ? 'text-white' : 'text-[var(--color-foreground)]'}`}>
                         {mood.label}
                       </span>
-                      <span className={`text-xs mt-0.5 ${isSelected ? 'text-white/70' : 'text-[#8E8E93]'}`}>
+                      <span className={`text-xs mt-0.5 ${isSelected ? 'text-white/70' : 'text-[var(--color-muted-foreground)]'}`}>
                         {isSelected && confirming ? 'Prêt — chargement de ton protocole…' : mood.sublabel}
                       </span>
                     </div>
