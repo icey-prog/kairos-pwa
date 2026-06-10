@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'nk-static-v2'
-const API_CACHE = 'nk-api-v2'
+const STATIC_CACHE = 'nk-static-v3'
+const API_CACHE = 'nk-api-v3'
 const STATIC_ASSETS = ['/', '/manifest.json', '/offline.html']
 
 // Scheduled notification timers keyed by taskId
@@ -114,12 +114,19 @@ async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName)
   const cached = await cache.match(request)
 
-  const revalidate = fetch(request)
+  const revalidate = fetch(request, { mode: 'cors', credentials: 'omit' })
     .then((response) => {
       if (response.ok) cache.put(request, response.clone())
       return response
     })
-    .catch(() => cached)
+    .catch(() => null)
 
-  return cached || revalidate
+  // Return cached immediately if available; fall back to network
+  if (cached) return cached
+  const fresh = await revalidate
+  // If both fail, return empty JSON array so UI doesn't crash
+  return fresh ?? new Response('[]', {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
