@@ -343,7 +343,7 @@ export default function FeynmanNotes() {
           <AnimatePresence>
             {filtered.map((note) => {
               const Icon = getDisciplineIcon(note.discipline)
-              const config = DISCIPLINE_CONFIG[note.discipline]
+              const config = DISCIPLINE_CONFIG[note.discipline] ?? DISCIPLINE_CONFIG.coding
               const isExpanded = expandedNote === note.id
               return (
                 <motion.div
