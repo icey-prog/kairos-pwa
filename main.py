@@ -47,11 +47,13 @@ _extra_origin = os.environ.get("FRONTEND_URL", "")
 _allowed_origins = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "https://kairos-pwa.vercel.app",
 ] + ([_extra_origin] if _extra_origin else [])
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )

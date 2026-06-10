@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'nk-static-v4'
-const API_CACHE = 'nk-api-v4'
+const STATIC_CACHE = 'nk-static-v5'
+const API_CACHE = 'nk-api-v5'
 const STATIC_ASSETS = ['/', '/manifest.json', '/offline.html']
 
 // Scheduled notification timers keyed by taskId
@@ -124,9 +124,11 @@ async function staleWhileRevalidate(request, cacheName) {
   // Return cached immediately if available; fall back to network
   if (cached) return cached
   const fresh = await revalidate
-  // If both fail, return empty JSON array so UI doesn't crash
-  return fresh ?? new Response('[]', {
-    status: 200,
+  // If both fail, return a valid 503 Response (never null — that crashes the SW).
+  // Status 503 makes the SWR fetcher throw, so SWR retries instead of caching
+  // fabricated data. Returning '[]' would corrupt object endpoints like /xp/balance.
+  return fresh ?? new Response(JSON.stringify({ error: 'offline' }), {
+    status: 503,
     headers: { 'Content-Type': 'application/json' },
   })
 }
