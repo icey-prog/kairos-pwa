@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'nk-static-v3'
-const API_CACHE = 'nk-api-v3'
+const STATIC_CACHE = 'nk-static-v4'
+const API_CACHE = 'nk-api-v4'
 const STATIC_ASSETS = ['/', '/manifest.json', '/offline.html']
 
 // Scheduled notification timers keyed by taskId
@@ -43,8 +43,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const cache = caches.open(STATIC_CACHE)
-          cache.then((c) => c.put(request, res.clone()))
+          const clone = res.clone()
+          caches.open(STATIC_CACHE).then((c) => c.put(request, clone))
           return res
         })
         .catch(() => caches.match('/offline.html'))

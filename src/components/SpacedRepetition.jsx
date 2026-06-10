@@ -140,7 +140,7 @@ export default function SpacedRepetition() {
   // ── Review mode UI ──────────────────────────────────────────────────────────
   if (isReviewMode && dueToday.length > 0) {
     const currentItem = dueToday[currentReviewIndex]
-    const config = DISCIPLINE_CONFIG[currentItem.discipline]
+    const config = DISCIPLINE_CONFIG[currentItem.discipline] ?? DISCIPLINE_CONFIG.coding
     const Icon = getDisciplineIcon(currentItem.discipline)
     const progress = ((currentReviewIndex + 1) / dueToday.length) * 100
 
@@ -345,7 +345,7 @@ export default function SpacedRepetition() {
         <div className="grid grid-cols-1 gap-3">
           {items.map((item) => {
             const Icon = getDisciplineIcon(item.discipline)
-            const config = DISCIPLINE_CONFIG[item.discipline]
+            const config = DISCIPLINE_CONFIG[item.discipline] ?? DISCIPLINE_CONFIG.coding
             const isDue = differenceInDays(today, item.next_review_date) >= 0
             const daysUntil = differenceInDays(item.next_review_date, today)
             return (
