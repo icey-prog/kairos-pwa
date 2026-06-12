@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import useStore from './store/useStore'
 import MoodGate from './components/MoodGate'
 import Arena from './components/Arena'
@@ -9,8 +9,11 @@ import FloatingNav from './components/FloatingNav'
 import { API } from './lib/api'
 import { adaptTask } from './lib/taskBridge'
 
+const DisciplineDetail = lazy(() => import('./components/DisciplineDetail'))
+
 export default function App() {
   const moodLogged = useStore((s) => s.moodLogged)
+  const activeView = useStore((s) => s.activeView)
   const setMood = useStore((s) => s.setMood)
   const setActiveTask = useStore((s) => s.setActiveTask)
   const setMainTab = useStore((s) => s.setMainTab)
@@ -79,6 +82,12 @@ export default function App() {
       <ErrorBoundary>
         {moodLogged ? <Arena /> : <MoodGate />}
       </ErrorBoundary>
+      {/* Formation overlay — main views stay mounted underneath (timer survives) */}
+      {moodLogged && activeView === 'discipline' && (
+        <Suspense fallback={null}>
+          <DisciplineDetail />
+        </Suspense>
+      )}
       <FloatingNav />
       <Toaster position="bottom-right" />
     </>
