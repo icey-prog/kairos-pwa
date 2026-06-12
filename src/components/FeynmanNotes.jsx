@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Lightbulb, Plus, Search, BookOpen,
-  Star, Edit3, Sparkles, ChevronDown, ChevronUp, MoreHorizontal,
+  Star, Edit3, Sparkles, ChevronDown, ChevronUp, ChevronRight, MoreHorizontal,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -21,6 +21,7 @@ import DisciplineChips from './DisciplineChips'
 import NewDisciplineDialog from './NewDisciplineDialog'
 import NoteActionSheet from './NoteActionSheet'
 import { haptic } from '../lib/haptic'
+import useStore from '../store/useStore'
 
 const ADD_DISCIPLINE = '__add__'
 
@@ -44,6 +45,7 @@ const EMPTY_NOTE = {
 export default function FeynmanNotes() {
   const { data: rawNotes } = useSWR(`${API}/feynman`, fetcher, { refreshInterval: 10000 })
   const { disciplines, bySlug } = useDisciplines()
+  const openDiscipline = useStore((s) => s.openDiscipline)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [expandedNote, setExpandedNote] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -321,6 +323,17 @@ export default function FeynmanNotes() {
           onSelect={setSelectedDiscipline}
           counts={counts}
         />
+        {selectedDiscipline !== 'all' && bySlug[selectedDiscipline] && (
+          <button
+            onClick={() => { haptic.light(); openDiscipline(selectedDiscipline) }}
+            className="w-full flex items-center justify-between min-h-[44px] px-4 rounded-xl glass border-0 active:scale-[0.98] transition-transform"
+          >
+            <span className="text-[13px] font-semibold text-[var(--color-foreground)]">
+              Ouvrir la formation · {bySlug[selectedDiscipline].name}
+            </span>
+            <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)]" />
+          </button>
+        )}
       </div>
 
       {/* Notes list */}

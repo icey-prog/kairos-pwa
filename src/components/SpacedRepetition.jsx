@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle, AlertCircle,
-  Calendar, TrendingUp, Search, RotateCcw,
+  Calendar, TrendingUp, Search, RotateCcw, ChevronRight,
 } from 'lucide-react'
 import { differenceInDays, parseISO, isAfter, startOfDay } from 'date-fns'
 import useSWR, { mutate } from 'swr'
@@ -14,6 +14,7 @@ import {
 import { cn } from '../lib/utils'
 import { API, fetcher } from '../lib/api'
 import { haptic } from '../lib/haptic'
+import useStore from '../store/useStore'
 import { useDisciplines } from '../hooks/useDisciplines'
 import { resolveIcon } from '../lib/disciplineIcons'
 import DisciplineChips from './DisciplineChips'
@@ -66,6 +67,9 @@ const qualityLabels = [
 export default function SpacedRepetition() {
   const { data: rawItems } = useSWR(`${API}/spaced-cards`, fetcher, { refreshInterval: 10000 })
   const { disciplines, bySlug } = useDisciplines()
+  const openDiscipline = useStore((s) => s.openDiscipline)
+  const pendingReviewSlug = useStore((s) => s.pendingReviewSlug)
+  const setPendingReviewSlug = useStore((s) => s.setPendingReviewSlug)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewQueue, setReviewQueue] = useState([])      // snapshot — frozen at session start
@@ -157,6 +161,16 @@ export default function SpacedRepetition() {
     setShowAnswer(false)
   }
   const startReview = () => startReviewWith(dueToday)
+
+  // DisciplineDetail CTA → auto-start a filtered review when we land on this tab.
+  useEffect(() => {
+    if (!pendingReviewSlug) return
+    setDisciplineFilter(pendingReviewSlug)
+    const due = items.filter((c) => c.discipline === pendingReviewSlug && isCardDue(c.next_review_date, today))
+    if (due.length) startReviewWith(due)
+    setPendingReviewSlug(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingReviewSlug, rawItems])
 
   // Award XP once a full session is completed (+5/card, capped at +50).
   const awardSessionXp = async (cardCount) => {
@@ -436,6 +450,19 @@ export default function SpacedRepetition() {
         onSelect={setDisciplineFilter}
         counts={counts}
       />
+
+      {/* Open the full Formation view for the selected discipline */}
+      {disciplineFilter !== 'all' && bySlug[disciplineFilter] && (
+        <button
+          onClick={() => { haptic.light(); openDiscipline(disciplineFilter) }}
+          className="w-full flex items-center justify-between min-h-[44px] px-4 rounded-xl glass border-0 active:scale-[0.98] transition-transform"
+        >
+          <span className="text-[13px] font-semibold text-[var(--color-foreground)]">
+            Ouvrir la formation · {bySlug[disciplineFilter].name}
+          </span>
+          <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)]" />
+        </button>
+      )}
 
       {/* Status segmented control */}
       <div className="flex gap-1.5 p-1 rounded-xl bg-[var(--color-secondary)]">

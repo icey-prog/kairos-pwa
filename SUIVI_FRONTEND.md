@@ -42,6 +42,18 @@
 - `SpacedRepetition` : chips + segmented statut (Toutes/À réviser/Cette semaine/Maîtrisées) + recherche texte ; stats recalculées sur le set filtré.
 - `FeynmanNotes` : mêmes chips (remplacent l'ancien Select) + select discipline dynamique.
 
+**Phase 4 — bottom sheets contextuels** ✅
+- `src/components/BottomSheet.jsx` : primitive partagée (drag-to-dismiss, spring, handle, touch ≥44px, safe-area).
+- `src/components/CardActionSheet.jsx` (tap carte) : Réviser maintenant (mono-carte) / Éditer (recto/verso/discipline → `PUT`) / Historique (état SM-2 live + timeline `ReviewLog`) / Supprimer (`DELETE`).
+- `src/components/NoteActionSheet.jsx` (tap ⋯) : Éditer (étapes Feynman + slider maîtrise → `PUT`) / Convertir (chaque lacune → carte SM-2 pré-remplie) / Supprimer.
+- Cartes tappables (cursor-pointer, active:scale, haptics) ; delete inline Feynman → bouton ⋯.
+
+**Phase 5 — page Formation par discipline** ✅
+- `src/store/useStore.js` : `activeView` ('main'|'discipline'), `activeDisciplineSlug`, `pendingReviewSlug` + `openDiscipline`/`closeDiscipline`/`setPendingReviewSlug`.
+- `src/components/DisciplineDetail.jsx` : overlay (lazy-loadé) header couleur/icône/description + retour ; 4 tuiles stats (`GET /api/disciplines/{id}/stats`) ; CTA « Réviser cette discipline » → signal `pendingReviewSlug` → SpacedRepetition auto-démarre une session filtrée ; sections cartes (triées par échéance) + notes, réutilisent `CardActionSheet`/`NoteActionSheet`.
+- Entrée : chip discipline sélectionné → bouton « Ouvrir la formation · {nom} » sur SpacedRepetition ET FeynmanNotes.
+- Contrainte respectée : vues principales restent montées (overlay `fixed`) → timer Pomodoro survit.
+
 ### Correctifs crash
 - `SpacedRepetition` + `FeynmanNotes` : garde `?? fallback` sur discipline inconnue (`Cannot read 'color'`).
 
@@ -51,9 +63,9 @@
 
 | Phase | Contenu | Dépend |
 |---|---|---|
-| **4** | Bottom sheets carte/note : éditer, historique SM-2, supprimer, convertir note→cartes | 3 ✅ |
-| **5** | Page Formation par discipline (`DisciplineDetail` + stats) | 3,4 |
 | **6** | Header `X-API-Key` (wrapper `apiFetch` depuis `VITE_API_KEY`) | — |
+
+Phases 2, 3, 4, 5 = **terminées**.
 
 ---
 
