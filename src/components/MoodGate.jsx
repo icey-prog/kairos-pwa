@@ -59,7 +59,7 @@ export default function MoodGate() {
     setConfirming(true)
 
     // Fire-and-forget — don't block UI on network
-    fetch(`${API}/mood`, {
+    apiFetch(`${API}/mood`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ score: mood.score }),

@@ -132,7 +132,7 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
       scheduled_date: scheduledDate || todayStr(),
     }
     try {
-      const res = await fetch(`${API}/tasks`, {
+      const res = await apiFetch(`${API}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

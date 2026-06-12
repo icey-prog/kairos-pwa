@@ -6,7 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
 import FloatingNav from './components/FloatingNav'
-import { API } from './lib/api'
+import { API, apiFetch } from './lib/api'
 import { adaptTask } from './lib/taskBridge'
 
 const DisciplineDetail = lazy(() => import('./components/DisciplineDetail'))
@@ -22,7 +22,7 @@ export default function App() {
   // Focus a task by id: fetch tasks list, find it, activate it, navigate
   const focusTaskById = async (taskId) => {
     try {
-      const tasks = await fetch(`${API}/tasks`).then((r) => r.json())
+      const tasks = await apiFetch(`${API}/tasks`).then((r) => r.json())
       const found = tasks.find((t) => String(t.id) === String(taskId))
       if (found) {
         setActiveTask(adaptTask(found))

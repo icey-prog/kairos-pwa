@@ -3,7 +3,7 @@ import { mutate } from 'swr'
 import { Pencil, Repeat, Trash2, ChevronRight, ChevronLeft, Plus, Check } from 'lucide-react'
 import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
-import { API } from '../lib/api'
+import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
 import { cn } from '../lib/utils'
@@ -41,7 +41,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
     if (!form.concept.trim() || saving) return
     setSaving(true)
     try {
-      const res = await fetch(`${API}/feynman/${note.id}`, {
+      const res = await apiFetch(`${API}/feynman/${note.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,7 +70,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
   const convertGap = async (gap, i) => {
     if (converted[i]) return
     try {
-      const res = await fetch(`${API}/spaced-cards`, {
+      const res = await apiFetch(`${API}/spaced-cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -96,7 +96,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
   const remove = async () => {
     if (!confirm('Supprimer cette note ?')) return
     try {
-      const res = await fetch(`${API}/feynman/${note.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`${API}/feynman/${note.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error(`delete failed: ${res.status}`)
       haptic.success()
       mutate(`${API}/feynman`)

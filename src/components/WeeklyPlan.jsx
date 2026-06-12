@@ -49,14 +49,14 @@ export default function WeeklyPlan({ onAddTask }) {
     const remaining = task.target_minutes - task.spent_minutes
     if (remaining <= 0) return
     try {
-      const r1 = await fetch(`${API}/tasks/${task.id}/add_time`, {
+      const r1 = await apiFetch(`${API}/tasks/${task.id}/add_time`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ minutes: remaining }),
       })
       if (!r1.ok) throw new Error(`add_time failed: ${r1.status}`)
 
-      const r2 = await fetch(`${API}/xp`, {
+      const r2 = await apiFetch(`${API}/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: 15, reason: task.title.slice(0, 100) }),

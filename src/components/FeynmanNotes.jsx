@@ -90,7 +90,7 @@ export default function FeynmanNotes() {
       mastery_level: newNote.masteryLevel,
     }
     try {
-      const res = await fetch(`${API}/feynman`, {
+      const res = await apiFetch(`${API}/feynman`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

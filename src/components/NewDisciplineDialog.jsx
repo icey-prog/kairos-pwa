@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { mutate } from 'swr'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, Button, Input } from '../lib/ui'
-import { API } from '../lib/api'
+import { API, apiFetch } from '../lib/api'
 import { PICKABLE_ICONS, PICKABLE_COLORS, resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
 import { cn } from '../lib/utils'
@@ -18,7 +18,7 @@ export default function NewDisciplineDialog({ open, onOpenChange, onCreated }) {
     if (!name.trim() || saving) return
     setSaving(true)
     try {
-      const res = await fetch(`${API}/disciplines`, {
+      const res = await apiFetch(`${API}/disciplines`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), color, icon }),

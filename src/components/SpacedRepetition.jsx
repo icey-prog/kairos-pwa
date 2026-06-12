@@ -136,7 +136,7 @@ export default function SpacedRepetition() {
       next_review_date: new Date().toISOString()
     }
     try {
-      const res = await fetch(`${API}/spaced-cards`, {
+      const res = await apiFetch(`${API}/spaced-cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -177,7 +177,7 @@ export default function SpacedRepetition() {
     const amount = Math.min(cardCount * 5, 50)
     if (amount <= 0) return
     try {
-      await fetch(`${API}/xp`, {
+      await apiFetch(`${API}/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, reason: 'Session révision' }),
@@ -193,7 +193,7 @@ export default function SpacedRepetition() {
     const updated = sm2(currentItem, quality)
     try {
       // POST /review applies the SM-2 update AND records a ReviewLog (vs. the old bare PUT).
-      const response = await fetch(`${API}/spaced-cards/${currentItem.id}/review`, {
+      const response = await apiFetch(`${API}/spaced-cards/${currentItem.id}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

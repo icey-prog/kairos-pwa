@@ -56,7 +56,7 @@ export default function InterleavingTimer({ onSessionComplete }) {
     if (phase === 'focus') {
       if (activeTask) {
         try {
-          await fetch(`${API}/tasks/${activeTask.id}/add_time`, {
+          await apiFetch(`${API}/tasks/${activeTask.id}/add_time`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ minutes: Math.floor(WORK_DURATION / 60) }),

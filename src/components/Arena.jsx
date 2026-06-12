@@ -90,12 +90,12 @@ export default function Arena() {
     const remaining = task.target_minutes - task.spent_minutes
     const xpGain = Math.max(10, Math.round(remaining * 0.8))
     try {
-      await fetch(`${API}/tasks/${task.id}/add_time`, {
+      await apiFetch(`${API}/tasks/${task.id}/add_time`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ minutes: remaining }),
       })
-      await fetch(`${API}/xp`, {
+      await apiFetch(`${API}/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: xpGain, reason: task.title.slice(0, 100) }),
@@ -116,7 +116,7 @@ export default function Arena() {
     haptic.medium()
     setRedeeming(reward.id)
     try {
-      const res = await fetch(`${API}/rewards/redeem/${reward.id}`, { method: 'POST' })
+      const res = await apiFetch(`${API}/rewards/redeem/${reward.id}`, { method: 'POST' })
       if (res.ok) {
         haptic.success()
         mutate(`${API}/xp/balance`)
@@ -128,7 +128,7 @@ export default function Arena() {
 
   const handleSessionComplete = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/xp`, {
+      const res = await apiFetch(`${API}/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: 50, reason: 'Session focus complétée' }),

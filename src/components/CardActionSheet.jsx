@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
-import { API } from '../lib/api'
+import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
 import { cn } from '../lib/utils'
@@ -37,7 +37,7 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
     if (!form.front.trim() || saving) return
     setSaving(true)
     try {
-      const res = await fetch(`${API}/spaced-cards/${card.id}`, {
+      const res = await apiFetch(`${API}/spaced-cards/${card.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ front: form.front, back: form.back, discipline: form.discipline }),
@@ -57,7 +57,7 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
   const loadHistory = async () => {
     setMode('history')
     try {
-      const data = await fetch(`${API}/spaced-cards/${card.id}/review-logs`).then((r) => r.json())
+      const data = await apiFetch(`${API}/spaced-cards/${card.id}/review-logs`).then((r) => r.json())
       setLogs(Array.isArray(data) ? data : [])
     } catch (err) {
       console.error('[CardActionSheet.loadHistory]', err)
@@ -68,7 +68,7 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
   const remove = async () => {
     if (!confirm('Supprimer cette carte ?')) return
     try {
-      const res = await fetch(`${API}/spaced-cards/${card.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`${API}/spaced-cards/${card.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error(`delete failed: ${res.status}`)
       haptic.success()
       mutate(`${API}/spaced-cards`)
