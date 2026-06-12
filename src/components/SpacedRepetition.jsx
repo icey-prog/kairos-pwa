@@ -13,10 +13,12 @@ import {
 } from '../lib/ui'
 import { cn } from '../lib/utils'
 import { API, fetcher } from '../lib/api'
+import { haptic } from '../lib/haptic'
 import { useDisciplines } from '../hooks/useDisciplines'
 import { resolveIcon } from '../lib/disciplineIcons'
 import DisciplineChips from './DisciplineChips'
 import NewDisciplineDialog from './NewDisciplineDialog'
+import CardActionSheet from './CardActionSheet'
 
 const ADD_DISCIPLINE = '__add__'   // sentinel value for the "+ Nouvelle discipline" select entry
 
@@ -76,6 +78,7 @@ export default function SpacedRepetition() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [newDisciplineOpen, setNewDisciplineOpen] = useState(false)
+  const [activeCard, setActiveCard] = useState(null)   // card whose action sheet is open
 
   const today = new Date()
   const items = (rawItems || []).map(i => ({ ...i, next_review_date: parseISO(i.next_review_date) }))
@@ -146,13 +149,14 @@ export default function SpacedRepetition() {
   }
 
   // Freeze the queue at session start so background mutate() can't drop or reorder cards mid-review.
-  const startReview = () => {
-    if (dueToday.length === 0) return
-    setReviewQueue([...dueToday])
+  const startReviewWith = (cards) => {
+    if (!cards.length) return
+    setReviewQueue([...cards])
     setIsReviewMode(true)
     setCurrentReviewIndex(0)
     setShowAnswer(false)
   }
+  const startReview = () => startReviewWith(dueToday)
 
   // Award XP once a full session is completed (+5/card, capped at +50).
   const awardSessionXp = async (cardCount) => {
@@ -497,8 +501,9 @@ export default function SpacedRepetition() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+                onClick={() => { haptic.light(); setActiveCard(item) }}
                 className={cn(
-                  'glass rounded-xl p-4 border-0 card-hover',
+                  'glass rounded-xl p-4 border-0 card-hover cursor-pointer active:scale-[0.98] transition-transform',
                   isDue && 'ring-2 ring-rose-500/50',
                 )}
               >
@@ -540,6 +545,16 @@ export default function SpacedRepetition() {
         open={newDisciplineOpen}
         onOpenChange={setNewDisciplineOpen}
         onCreated={(slug) => setNewItem((prev) => ({ ...prev, discipline: slug }))}
+      />
+
+      {/* Per-card contextual actions */}
+      <CardActionSheet
+        open={!!activeCard}
+        onClose={() => setActiveCard(null)}
+        card={activeCard}
+        disciplines={disciplines}
+        bySlug={bySlug}
+        onReviewNow={(card) => startReviewWith([card])}
       />
     </motion.div>
   )

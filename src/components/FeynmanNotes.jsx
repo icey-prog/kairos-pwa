@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Lightbulb, Plus, Search, BookOpen,
-  Star, Edit3, Sparkles, ChevronDown, ChevronUp, XCircle,
+  Star, Edit3, Sparkles, ChevronDown, ChevronUp, MoreHorizontal,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -19,6 +19,8 @@ import { useDisciplines } from '../hooks/useDisciplines'
 import { resolveIcon } from '../lib/disciplineIcons'
 import DisciplineChips from './DisciplineChips'
 import NewDisciplineDialog from './NewDisciplineDialog'
+import NoteActionSheet from './NoteActionSheet'
+import { haptic } from '../lib/haptic'
 
 const ADD_DISCIPLINE = '__add__'
 
@@ -47,6 +49,7 @@ export default function FeynmanNotes() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDiscipline, setSelectedDiscipline] = useState('all')
   const [newDisciplineOpen, setNewDisciplineOpen] = useState(false)
+  const [activeNote, setActiveNote] = useState(null)
   const [newNote, setNewNote] = useState(EMPTY_NOTE)
 
   const notes = (rawNotes || []).map((n) => {
@@ -96,17 +99,6 @@ export default function FeynmanNotes() {
       setIsDialogOpen(false)
     } catch (err) {
       console.error('[handleSubmit]', err)
-    }
-  }
-
-  const handleDelete = async (id) => {
-    if (!confirm('Supprimer cette note ?')) return
-    try {
-      const res = await fetch(`${API}/feynman/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error(`delete note failed: ${res.status}`)
-      mutate(`${API}/feynman`)
-    } catch (err) {
-      console.error('[handleDelete]', err)
     }
   }
 
@@ -379,13 +371,17 @@ export default function FeynmanNotes() {
                                 {note.masteryLevel}% maîtrisé
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-[11px] text-[var(--color-muted-foreground)] flex-shrink-0">
                                 {format(note.createdAt, 'dd MMM', { locale: fr })}
                               </span>
-                              <Button variant="ghost" size="xs" onClick={() => handleDelete(note.id)} className="h-6 w-6 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10">
-                                <XCircle className="w-3 h-3" />
-                              </Button>
+                              <button
+                                onClick={() => { haptic.light(); setActiveNote(note) }}
+                                className="w-9 h-9 -mr-1 rounded-full flex items-center justify-center text-[var(--color-muted-foreground)] active:scale-95 transition-transform"
+                                aria-label="Actions"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                           <div className="mt-2 p-3 rounded-lg bg-[var(--color-secondary)]/50">
@@ -460,6 +456,15 @@ export default function FeynmanNotes() {
         open={newDisciplineOpen}
         onOpenChange={setNewDisciplineOpen}
         onCreated={(slug) => setNewNote((prev) => ({ ...prev, discipline: slug }))}
+      />
+
+      {/* Per-note contextual actions */}
+      <NoteActionSheet
+        open={!!activeNote}
+        onClose={() => setActiveNote(null)}
+        note={activeNote}
+        disciplines={disciplines}
+        bySlug={bySlug}
       />
     </motion.div>
   )
