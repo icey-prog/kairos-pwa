@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Lightbulb, Plus, Search, BookOpen, Code2, Brain, Palette,
+  Lightbulb, Plus, Search, BookOpen,
   Star, Edit3, Sparkles, ChevronDown, ChevronUp, XCircle,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -14,17 +14,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../lib/ui'
 import { cn } from '../lib/utils'
-import { DISCIPLINE_CONFIG } from '../lib/types'
 import { API, fetcher } from '../lib/api'
+import { useDisciplines } from '../hooks/useDisciplines'
+import { resolveIcon } from '../lib/disciplineIcons'
+import DisciplineChips from './DisciplineChips'
+import NewDisciplineDialog from './NewDisciplineDialog'
 
-// No localStorage loading anymore
-
-const getDisciplineIcon = (id) => {
-  if (id === 'coding') return Code2
-  if (id === 'exolab') return Brain
-  if (id === 'design') return Palette
-  return BookOpen
-}
+const ADD_DISCIPLINE = '__add__'
 
 const getMasteryColor = (level) => {
   if (level >= 80) return 'text-emerald-400'
@@ -45,10 +41,12 @@ const EMPTY_NOTE = {
 
 export default function FeynmanNotes() {
   const { data: rawNotes } = useSWR(`${API}/feynman`, fetcher, { refreshInterval: 10000 })
+  const { disciplines, bySlug } = useDisciplines()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [expandedNote, setExpandedNote] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDiscipline, setSelectedDiscipline] = useState('all')
+  const [newDisciplineOpen, setNewDisciplineOpen] = useState(false)
   const [newNote, setNewNote] = useState(EMPTY_NOTE)
 
   const notes = (rawNotes || []).map((n) => {
@@ -128,6 +126,12 @@ export default function FeynmanNotes() {
     return matchSearch && matchDiscipline
   })
 
+  const counts = notes.reduce((acc, n) => {
+    acc.all = (acc.all || 0) + 1
+    acc[n.discipline] = (acc[n.discipline] || 0) + 1
+    return acc
+  }, {})
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -159,18 +163,28 @@ export default function FeynmanNotes() {
               {/* Discipline */}
               <div>
                 <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Discipline</label>
-                <Select value={newNote.discipline} onValueChange={(v) => setNewNote({ ...newNote, discipline: v })}>
+                <Select
+                  value={newNote.discipline}
+                  onValueChange={(v) => {
+                    if (v === ADD_DISCIPLINE) { setNewDisciplineOpen(true); return }
+                    setNewNote({ ...newNote, discipline: v })
+                  }}
+                >
                   <SelectTrigger><SelectValue placeholder="Choisis une discipline" /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(DISCIPLINE_CONFIG).map(([id, cfg]) => {
-                      const Icon = getDisciplineIcon(id)
+                    {disciplines.map((d) => {
+                      const Icon = resolveIcon(d.icon)
                       return (
-                        <SelectItem key={id} value={id}>
-                          <Icon className="w-4 h-4" style={{ color: cfg.color }} />
-                          {cfg.name}
+                        <SelectItem key={d.slug} value={d.slug}>
+                          <Icon className="w-4 h-4" style={{ color: d.color }} />
+                          {d.name}
                         </SelectItem>
                       )
                     })}
+                    <SelectItem value={ADD_DISCIPLINE}>
+                      <Plus className="w-4 h-4" />
+                      Nouvelle discipline
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -299,8 +313,8 @@ export default function FeynmanNotes() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      <div className="space-y-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted-foreground)]" />
           <Input
             placeholder="Rechercher un concept..."
@@ -309,17 +323,12 @@ export default function FeynmanNotes() {
             className="pl-10"
           />
         </div>
-        <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline}>
-          <SelectTrigger className="sm:w-48">
-            <SelectValue placeholder="Toutes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les disciplines</SelectItem>
-            {Object.entries(DISCIPLINE_CONFIG).map(([id, cfg]) => (
-              <SelectItem key={id} value={id}>{cfg.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <DisciplineChips
+          disciplines={disciplines}
+          selected={selectedDiscipline}
+          onSelect={setSelectedDiscipline}
+          counts={counts}
+        />
       </div>
 
       {/* Notes list */}
@@ -342,8 +351,8 @@ export default function FeynmanNotes() {
         ) : (
           <AnimatePresence>
             {filtered.map((note) => {
-              const Icon = getDisciplineIcon(note.discipline)
-              const config = DISCIPLINE_CONFIG[note.discipline] ?? DISCIPLINE_CONFIG.coding
+              const config = bySlug[note.discipline] ?? { color: '#3B82F6', icon: 'BookOpen' }
+              const Icon = resolveIcon(config.icon)
               const isExpanded = expandedNote === note.id
               return (
                 <motion.div
@@ -445,6 +454,13 @@ export default function FeynmanNotes() {
           </AnimatePresence>
         )}
       </div>
+
+      {/* Inline discipline creation — selects the new discipline on the note form */}
+      <NewDisciplineDialog
+        open={newDisciplineOpen}
+        onOpenChange={setNewDisciplineOpen}
+        onCreated={(slug) => setNewNote((prev) => ({ ...prev, discipline: slug }))}
+      />
     </motion.div>
   )
 }

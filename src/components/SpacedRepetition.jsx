@@ -2,18 +2,30 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle, AlertCircle,
-  Calendar, TrendingUp, Code2, Palette, BookOpen, RotateCcw,
+  Calendar, TrendingUp, Search, RotateCcw,
 } from 'lucide-react'
 import { differenceInDays, parseISO, isAfter, startOfDay } from 'date-fns'
 import useSWR, { mutate } from 'swr'
 import {
   Card, CardContent, CardHeader, CardTitle,
-  Button, Textarea, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Button, Input, Textarea, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../lib/ui'
 import { cn } from '../lib/utils'
-import { DISCIPLINE_CONFIG } from '../lib/types'
 import { API, fetcher } from '../lib/api'
+import { useDisciplines } from '../hooks/useDisciplines'
+import { resolveIcon } from '../lib/disciplineIcons'
+import DisciplineChips from './DisciplineChips'
+import NewDisciplineDialog from './NewDisciplineDialog'
+
+const ADD_DISCIPLINE = '__add__'   // sentinel value for the "+ Nouvelle discipline" select entry
+
+const STATUS_FILTERS = [
+  { id: 'all',      label: 'Toutes' },
+  { id: 'due',      label: 'À réviser' },
+  { id: 'week',     label: 'Cette semaine' },
+  { id: 'mastered', label: 'Maîtrisées' },
+]
 
 // ─── SM-2 algorithm ──────────────────────────────────────────────────────────
 function sm2(item, quality) {
@@ -34,13 +46,6 @@ function sm2(item, quality) {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const getDisciplineIcon = (id) => {
-  if (id === 'coding') return Code2
-  if (id === 'exolab') return Brain
-  if (id === 'design') return Palette
-  return BookOpen
-}
-
 // A card is due if its next_review_date is not strictly after today (day granularity).
 // differenceInDays truncates toward zero → a card due in 23h counted as due. Use day boundaries.
 const isCardDue = (date, today = new Date()) =>
@@ -58,6 +63,7 @@ const qualityLabels = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function SpacedRepetition() {
   const { data: rawItems } = useSWR(`${API}/spaced-cards`, fetcher, { refreshInterval: 10000 })
+  const { disciplines, bySlug } = useDisciplines()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewQueue, setReviewQueue] = useState([])      // snapshot — frozen at session start
@@ -65,15 +71,50 @@ export default function SpacedRepetition() {
   const [showAnswer, setShowAnswer] = useState(false)
   const [newItem, setNewItem] = useState({ content: '', back: '', discipline: '' })
   const [saving, setSaving] = useState(false)
+  // Filters
+  const [disciplineFilter, setDisciplineFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [newDisciplineOpen, setNewDisciplineOpen] = useState(false)
 
-  const items = (rawItems || []).map(i => ({ ...i, next_review_date: parseISO(i.next_review_date) }))
   const today = new Date()
+  const items = (rawItems || []).map(i => ({ ...i, next_review_date: parseISO(i.next_review_date) }))
+
+  // dueToday drives the review CTA — always the full due set, independent of UI filters.
   const dueToday = items.filter((item) => isCardDue(item.next_review_date, today))
-  const upcoming = items.filter((item) => {
+
+  // Per-discipline counts for the chips.
+  const counts = items.reduce((acc, item) => {
+    acc.all = (acc.all || 0) + 1
+    acc[item.discipline] = (acc[item.discipline] || 0) + 1
+    return acc
+  }, {})
+
+  // Apply discipline + status + search filters for the list view and its stats.
+  const matchesStatus = (item) => {
+    if (statusFilter === 'due') return isCardDue(item.next_review_date, today)
+    if (statusFilter === 'week') {
+      const d = differenceInDays(item.next_review_date, today)
+      return d > 0 && d <= 7
+    }
+    if (statusFilter === 'mastered') return item.repetition >= 5
+    return true
+  }
+  const q = search.trim().toLowerCase()
+  const filtered = items.filter((item) => {
+    if (disciplineFilter !== 'all' && item.discipline !== disciplineFilter) return false
+    if (!matchesStatus(item)) return false
+    if (q && !(`${item.front} ${item.back || ''}`.toLowerCase().includes(q))) return false
+    return true
+  })
+
+  // Stats recompute on the filtered set.
+  const statDue = filtered.filter((item) => isCardDue(item.next_review_date, today)).length
+  const statWeek = filtered.filter((item) => {
     const d = differenceInDays(item.next_review_date, today)
     return d > 0 && d <= 7
-  })
-  const mastered = items.filter((item) => item.repetition >= 5)
+  }).length
+  const statMastered = filtered.filter((item) => item.repetition >= 5).length
 
   const handleAddItem = async () => {
     if (!newItem.content || !newItem.back || !newItem.discipline || saving) return
@@ -167,8 +208,8 @@ export default function SpacedRepetition() {
   // ── Review mode UI ──────────────────────────────────────────────────────────
   if (isReviewMode && reviewQueue.length > 0) {
     const currentItem = reviewQueue[currentReviewIndex]
-    const config = DISCIPLINE_CONFIG[currentItem.discipline] ?? DISCIPLINE_CONFIG.coding
-    const Icon = getDisciplineIcon(currentItem.discipline)
+    const config = bySlug[currentItem.discipline] ?? { name: currentItem.discipline, color: '#3B82F6', icon: 'BookOpen' }
+    const Icon = resolveIcon(config.icon)
     const progress = ((currentReviewIndex + 1) / reviewQueue.length) * 100
 
     return (
@@ -300,18 +341,28 @@ export default function SpacedRepetition() {
               <div className="space-y-4 pt-2">
                 <div>
                   <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Discipline</label>
-                  <Select value={newItem.discipline} onValueChange={(v) => setNewItem({ ...newItem, discipline: v })}>
+                  <Select
+                    value={newItem.discipline}
+                    onValueChange={(v) => {
+                      if (v === ADD_DISCIPLINE) { setNewDisciplineOpen(true); return }
+                      setNewItem({ ...newItem, discipline: v })
+                    }}
+                  >
                     <SelectTrigger><SelectValue placeholder="Choisis une discipline" /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(DISCIPLINE_CONFIG).map(([id, cfg]) => {
-                        const Icon = getDisciplineIcon(id)
+                      {disciplines.map((d) => {
+                        const Icon = resolveIcon(d.icon)
                         return (
-                          <SelectItem key={id} value={id}>
-                            <Icon className="w-4 h-4" style={{ color: cfg.color }} />
-                            {cfg.name}
+                          <SelectItem key={d.slug} value={d.slug}>
+                            <Icon className="w-4 h-4" style={{ color: d.color }} />
+                            {d.name}
                           </SelectItem>
                         )
                       })}
+                      <SelectItem value={ADD_DISCIPLINE}>
+                        <Plus className="w-4 h-4" />
+                        Nouvelle discipline
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -352,13 +403,13 @@ export default function SpacedRepetition() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats — recomputed on the filtered set */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { count: dueToday.length,  label: 'À réviser',       Icon: AlertCircle, color: 'text-rose-400',    bg: 'bg-rose-500/20' },
-          { count: upcoming.length,  label: 'Cette semaine',   Icon: Calendar,    color: 'text-amber-400',   bg: 'bg-amber-500/20' },
-          { count: mastered.length,  label: 'Maîtrisés',       Icon: CheckCircle2,color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
-          { count: items.length,     label: 'Total cartes',    Icon: Repeat,      color: 'text-blue-400',    bg: 'bg-blue-500/20' },
+          { count: statDue,           label: 'À réviser',     Icon: AlertCircle, color: 'text-rose-400',    bg: 'bg-rose-500/20' },
+          { count: statWeek,          label: 'Cette semaine', Icon: Calendar,    color: 'text-amber-400',   bg: 'bg-amber-500/20' },
+          { count: statMastered,      label: 'Maîtrisés',     Icon: CheckCircle2,color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+          { count: filtered.length,   label: 'Total cartes',  Icon: Repeat,      color: 'text-blue-400',    bg: 'bg-blue-500/20' },
         ].map(({ count, label, Icon, color, bg }) => (
           <Card key={label} className="glass border-0">
             <CardContent className="p-4 flex items-center gap-3">
@@ -372,6 +423,43 @@ export default function SpacedRepetition() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Discipline filter chips */}
+      <DisciplineChips
+        disciplines={disciplines}
+        selected={disciplineFilter}
+        onSelect={setDisciplineFilter}
+        counts={counts}
+      />
+
+      {/* Status segmented control */}
+      <div className="flex gap-1.5 p-1 rounded-xl bg-[var(--color-secondary)]">
+        {STATUS_FILTERS.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setStatusFilter(s.id)}
+            className={cn(
+              'flex-1 min-h-[36px] rounded-lg text-[12px] font-semibold transition-all active:scale-[0.97]',
+              statusFilter === s.id
+                ? 'bg-[var(--color-background)] text-[var(--color-foreground)] shadow-sm'
+                : 'text-[var(--color-muted-foreground)]',
+            )}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted-foreground)]" />
+        <Input
+          placeholder="Rechercher une carte..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* Cards list */}
@@ -389,11 +477,18 @@ export default function SpacedRepetition() {
             </Button>
           </CardContent>
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card className="glass border-0">
+          <CardContent className="p-10 text-center">
+            <Search className="w-12 h-12 mx-auto mb-3 opacity-25" />
+            <p className="text-sm text-[var(--color-muted-foreground)]">Aucune carte ne correspond aux filtres.</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3">
-          {items.map((item) => {
-            const Icon = getDisciplineIcon(item.discipline)
-            const config = DISCIPLINE_CONFIG[item.discipline] ?? DISCIPLINE_CONFIG.coding
+          {filtered.map((item) => {
+            const config = bySlug[item.discipline] ?? { color: '#3B82F6', icon: 'BookOpen' }
+            const Icon = resolveIcon(config.icon)
             const isDue = isCardDue(item.next_review_date, today)
             const daysUntil = differenceInDays(item.next_review_date, today)
             return (
@@ -439,6 +534,13 @@ export default function SpacedRepetition() {
           })}
         </div>
       )}
+
+      {/* Inline discipline creation — selects the new discipline on the card form */}
+      <NewDisciplineDialog
+        open={newDisciplineOpen}
+        onOpenChange={setNewDisciplineOpen}
+        onCreated={(slug) => setNewItem((prev) => ({ ...prev, discipline: slug }))}
+      />
     </motion.div>
   )
 }
