@@ -4,7 +4,7 @@ import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle, AlertCircle,
   Calendar, TrendingUp, Code2, Palette, BookOpen, RotateCcw,
 } from 'lucide-react'
-import { differenceInDays, parseISO } from 'date-fns'
+import { differenceInDays, parseISO, isAfter, startOfDay } from 'date-fns'
 import useSWR, { mutate } from 'swr'
 import {
   Card, CardContent, CardHeader, CardTitle,
@@ -41,6 +41,11 @@ const getDisciplineIcon = (id) => {
   return BookOpen
 }
 
+// A card is due if its next_review_date is not strictly after today (day granularity).
+// differenceInDays truncates toward zero → a card due in 23h counted as due. Use day boundaries.
+const isCardDue = (date, today = new Date()) =>
+  !isAfter(startOfDay(date), startOfDay(today))
+
 const qualityLabels = [
   { value: 0, label: 'Oublié',      color: 'text-rose-500' },
   { value: 1, label: 'Très dur',    color: 'text-orange-500' },
@@ -55,14 +60,15 @@ export default function SpacedRepetition() {
   const { data: rawItems } = useSWR(`${API}/spaced-cards`, fetcher, { refreshInterval: 10000 })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isReviewMode, setIsReviewMode] = useState(false)
+  const [reviewQueue, setReviewQueue] = useState([])      // snapshot — frozen at session start
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
-  const [newItem, setNewItem] = useState({ content: '', discipline: '' })
+  const [newItem, setNewItem] = useState({ content: '', back: '', discipline: '' })
   const [saving, setSaving] = useState(false)
 
   const items = (rawItems || []).map(i => ({ ...i, next_review_date: parseISO(i.next_review_date) }))
   const today = new Date()
-  const dueToday = items.filter((item) => differenceInDays(today, item.next_review_date) >= 0)
+  const dueToday = items.filter((item) => isCardDue(item.next_review_date, today))
   const upcoming = items.filter((item) => {
     const d = differenceInDays(item.next_review_date, today)
     return d > 0 && d <= 7
@@ -70,11 +76,11 @@ export default function SpacedRepetition() {
   const mastered = items.filter((item) => item.repetition >= 5)
 
   const handleAddItem = async () => {
-    if (!newItem.content || !newItem.discipline || saving) return
+    if (!newItem.content || !newItem.back || !newItem.discipline || saving) return
     setSaving(true)
     const payload = {
       front: newItem.content,
-      back: '',
+      back: newItem.back,
       discipline: newItem.discipline,
       interval: 1,
       repetition: 0,
@@ -89,7 +95,7 @@ export default function SpacedRepetition() {
       })
       if (!res.ok) throw new Error(`create card failed: ${res.status}`)
       mutate(`${API}/spaced-cards`)
-      setNewItem({ content: '', discipline: '' })
+      setNewItem({ content: '', back: '', discipline: '' })
       setIsDialogOpen(false)
     } catch (err) {
       console.error('[handleAddItem]', err)
@@ -98,21 +104,41 @@ export default function SpacedRepetition() {
     }
   }
 
+  // Freeze the queue at session start so background mutate() can't drop or reorder cards mid-review.
   const startReview = () => {
     if (dueToday.length === 0) return
+    setReviewQueue([...dueToday])
     setIsReviewMode(true)
     setCurrentReviewIndex(0)
     setShowAnswer(false)
   }
 
+  // Award XP once a full session is completed (+5/card, capped at +50).
+  const awardSessionXp = async (cardCount) => {
+    const amount = Math.min(cardCount * 5, 50)
+    if (amount <= 0) return
+    try {
+      await fetch(`${API}/xp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, reason: 'Session révision' }),
+      })
+      mutate(`${API}/xp/balance`)
+    } catch (err) {
+      console.error('[awardSessionXp]', err)
+    }
+  }
+
   const handleReview = async (quality) => {
-    const currentItem = dueToday[currentReviewIndex]
+    const currentItem = reviewQueue[currentReviewIndex]
     const updated = sm2(currentItem, quality)
     try {
-      const response = await fetch(`${API}/spaced-cards/${currentItem.id}`, {
-        method: 'PUT',
+      // POST /review applies the SM-2 update AND records a ReviewLog (vs. the old bare PUT).
+      const response = await fetch(`${API}/spaced-cards/${currentItem.id}/review`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          quality,
           interval: updated.interval,
           repetition: updated.repetition,
           easiness_factor: updated.easiness_factor,
@@ -120,14 +146,15 @@ export default function SpacedRepetition() {
         }),
       })
 
-      if (!response.ok) throw new Error('API update failed')
+      if (!response.ok) throw new Error('API review failed')
 
       mutate(`${API}/spaced-cards`)
 
-      if (currentReviewIndex < dueToday.length - 1) {
+      if (currentReviewIndex < reviewQueue.length - 1) {
         setCurrentReviewIndex((prev) => prev + 1)
         setShowAnswer(false)
       } else {
+        await awardSessionXp(reviewQueue.length)
         setIsReviewMode(false)
         setCurrentReviewIndex(0)
         setShowAnswer(false)
@@ -138,11 +165,11 @@ export default function SpacedRepetition() {
   }
 
   // ── Review mode UI ──────────────────────────────────────────────────────────
-  if (isReviewMode && dueToday.length > 0) {
-    const currentItem = dueToday[currentReviewIndex]
+  if (isReviewMode && reviewQueue.length > 0) {
+    const currentItem = reviewQueue[currentReviewIndex]
     const config = DISCIPLINE_CONFIG[currentItem.discipline] ?? DISCIPLINE_CONFIG.coding
     const Icon = getDisciplineIcon(currentItem.discipline)
-    const progress = ((currentReviewIndex + 1) / dueToday.length) * 100
+    const progress = ((currentReviewIndex + 1) / reviewQueue.length) * 100
 
     return (
       <motion.div
@@ -159,7 +186,7 @@ export default function SpacedRepetition() {
                 Session de révision
               </CardTitle>
               <span className="text-sm text-[var(--color-muted-foreground)]">
-                {currentReviewIndex + 1} / {dueToday.length}
+                {currentReviewIndex + 1} / {reviewQueue.length}
               </span>
             </div>
             <div className="h-2 bg-[var(--color-secondary)] rounded-full overflow-hidden mt-2">
@@ -190,8 +217,20 @@ export default function SpacedRepetition() {
                   initial={{ opacity: 0, y: 10, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-                  className="space-y-3"
+                  className="space-y-4"
                 >
+                  {/* Answer block — rendered before notation buttons */}
+                  <div className="rounded-xl bg-[var(--color-secondary)] border border-[var(--color-border)] p-4 text-left">
+                    {currentItem.back ? (
+                      <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">
+                        {currentItem.back}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-[var(--color-muted-foreground)] italic">
+                        Aucune réponse enregistrée pour cette carte.
+                      </p>
+                    )}
+                  </div>
                   <p className="text-sm text-[var(--color-muted-foreground)]">Comment as-tu trouvé ?</p>
                   <div className="flex flex-wrap justify-center gap-2">
                     {qualityLabels.map((q) => (
@@ -277,18 +316,27 @@ export default function SpacedRepetition() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Contenu à mémoriser</label>
+                  <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Question (recto)</label>
                   <Textarea
                     placeholder="Ex: Qu'est-ce qu'une closure en JavaScript ?"
                     value={newItem.content}
                     onChange={(e) => setNewItem({ ...newItem, content: e.target.value })}
-                    className="min-h-[100px]"
+                    className="min-h-[80px]"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Réponse (verso)</label>
+                  <Textarea
+                    placeholder="Ex: Une fonction qui capture les variables de son scope lexical."
+                    value={newItem.back}
+                    onChange={(e) => setNewItem({ ...newItem, back: e.target.value })}
+                    className="min-h-[80px]"
                   />
                 </div>
                 <Button
                   onClick={handleAddItem}
                   className="w-full gap-2"
-                  disabled={!newItem.content || !newItem.discipline || saving}
+                  disabled={!newItem.content || !newItem.back || !newItem.discipline || saving}
                 >
                   <Plus className="w-4 h-4" />
                   Ajouter à la révision
@@ -346,7 +394,7 @@ export default function SpacedRepetition() {
           {items.map((item) => {
             const Icon = getDisciplineIcon(item.discipline)
             const config = DISCIPLINE_CONFIG[item.discipline] ?? DISCIPLINE_CONFIG.coding
-            const isDue = differenceInDays(today, item.next_review_date) >= 0
+            const isDue = isCardDue(item.next_review_date, today)
             const daysUntil = differenceInDays(item.next_review_date, today)
             return (
               <motion.div
@@ -365,7 +413,14 @@ export default function SpacedRepetition() {
                     <Icon className="w-5 h-5" style={{ color: config.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-[var(--color-foreground)] truncate">{item.front}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm text-[var(--color-foreground)] truncate">{item.front}</p>
+                      {!item.back && (
+                        <span className="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
+                          Sans réponse
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 mt-1 text-xs">
                       <span className={cn('flex items-center gap-1', isDue ? 'text-rose-400' : 'text-[var(--color-muted-foreground)]')}>
                         <Clock className="w-3 h-3" />
