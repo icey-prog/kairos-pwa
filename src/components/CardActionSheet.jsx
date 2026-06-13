@@ -3,7 +3,7 @@ import { mutate } from 'swr'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import {
-  Brain, Pencil, History, Trash2, ChevronRight, Star, Clock, TrendingUp, ChevronLeft,
+  Brain, Pencil, Trash2, Star, Clock, TrendingUp, ChevronLeft,
 } from 'lucide-react'
 import { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
@@ -14,24 +14,30 @@ import { cn } from '../lib/utils'
 
 const QUALITY_STARS = (q) => '★'.repeat(q) + '☆'.repeat(5 - q)
 
-// Contextual actions for a single SM-2 card. Modes: menu → edit | history.
+// Full detail view for a single SM-2 card. Modes: detail (read) → edit.
 export default function CardActionSheet({ open, onClose, card, disciplines, bySlug, onReviewNow }) {
-  const [mode, setMode] = useState('menu')
+  const [mode, setMode] = useState('detail')
   const [form, setForm] = useState({ front: '', back: '', discipline: '' })
   const [logs, setLogs] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // Reset to menu + hydrate edit form each time a card opens.
+  // Reset to detail + hydrate edit form + load history each time a card opens.
   useEffect(() => {
-    if (card) {
-      setMode('menu')
-      setForm({ front: card.front, back: card.back || '', discipline: card.discipline })
-      setLogs(null)
-    }
+    if (!card) return
+    setMode('detail')
+    setForm({ front: card.front, back: card.back || '', discipline: card.discipline })
+    setLogs(null)
+    let cancelled = false
+    apiFetch(`${API}/spaced-cards/${card.id}/review-logs`)
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setLogs(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setLogs([]) })
+    return () => { cancelled = true }
   }, [card])
 
   if (!card) return null
   const config = bySlug[card.discipline] ?? { name: card.discipline, color: '#3B82F6', icon: 'BookOpen' }
+  const DiscIcon = resolveIcon(config.icon)
 
   const saveEdit = async () => {
     if (!form.front.trim() || saving) return
@@ -54,17 +60,6 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
     }
   }
 
-  const loadHistory = async () => {
-    setMode('history')
-    try {
-      const data = await apiFetch(`${API}/spaced-cards/${card.id}/review-logs`).then((r) => r.json())
-      setLogs(Array.isArray(data) ? data : [])
-    } catch (err) {
-      console.error('[CardActionSheet.loadHistory]', err)
-      setLogs([])
-    }
-  }
-
   const remove = async () => {
     if (!confirm('Supprimer cette carte ?')) return
     try {
@@ -79,41 +74,20 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
     }
   }
 
-  const title = mode === 'edit' ? 'Éditer la carte' : mode === 'history' ? 'Historique' : card.front
-
-  // One action row — consistent icon + label + chevron, 56px tap target.
-  const Action = ({ Icon, label, sub, onClick, danger }) => (
-    <button
-      onClick={() => { haptic.select(); onClick() }}
-      className={cn(
-        'w-full flex items-center gap-3 min-h-[56px] px-3 rounded-2xl text-left transition-all active:scale-[0.98]',
-        danger ? 'active:bg-rose-500/10' : 'active:bg-[var(--color-secondary)]',
-      )}
-    >
-      <div className={cn(
-        'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-        danger ? 'bg-rose-500/15' : 'bg-[var(--color-secondary)]',
-      )}>
-        <Icon className={cn('w-5 h-5', danger ? 'text-rose-500' : 'text-[var(--color-foreground)]')} strokeWidth={1.75} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className={cn('text-[15px] font-semibold leading-tight', danger ? 'text-rose-500' : 'text-[var(--color-foreground)]')}>{label}</p>
-        {sub && <p className="text-[12px] text-[var(--color-muted-foreground)] mt-0.5 truncate">{sub}</p>}
-      </div>
-      <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)] flex-shrink-0" />
-    </button>
-  )
+  const title = mode === 'edit' ? 'Éditer la carte' : 'Détail de la carte'
 
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
-      {/* ── MENU ──────────────────────────────────────────────── */}
-      {mode === 'menu' && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 mb-3">
+      {/* ── DETAIL (read) ─────────────────────────────────────── */}
+      {mode === 'detail' && (
+        <div className="space-y-5">
+          {/* Discipline context — the link to your project */}
+          <div className="flex items-center gap-2 flex-wrap">
             <span
-              className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+              className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full"
               style={{ background: `${config.color}20`, color: config.color }}
             >
+              <DiscIcon className="w-3.5 h-3.5" />
               {config.name}
             </span>
             {!card.back && (
@@ -122,17 +96,73 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
               </span>
             )}
           </div>
-          <Action Icon={Brain} label="Réviser maintenant" sub="Session sur cette carte" onClick={() => { onReviewNow(card); onClose() }} />
-          <Action Icon={Pencil} label="Éditer" sub="Question, réponse, discipline" onClick={() => setMode('edit')} />
-          <Action Icon={History} label="Historique" sub="Révisions passées (SM-2)" onClick={loadHistory} />
-          <Action Icon={Trash2} label="Supprimer" sub="Action définitive" onClick={remove} danger />
+
+          {/* Question / Answer */}
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-[var(--color-border)] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Question</p>
+              <p className="text-[16px] font-semibold text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.front}</p>
+            </div>
+            <div className="rounded-2xl bg-[var(--color-secondary)] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Réponse</p>
+              {card.back ? (
+                <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.back}</p>
+              ) : (
+                <p className="text-sm text-[var(--color-muted-foreground)] italic">Aucune réponse — édite la carte pour la compléter.</p>
+              )}
+            </div>
+          </div>
+
+          {/* SM-2 state */}
+          <div className="grid grid-cols-3 gap-2">
+            <Stat Icon={Clock}      label="Prochaine"  value={format(card.next_review_date, 'dd MMM', { locale: fr })} />
+            <Stat Icon={TrendingUp} label="Facilité"   value={card.easiness_factor.toFixed(2)} />
+            <Stat Icon={Star}       label="Révisions"  value={`${card.repetition}`} />
+          </div>
+
+          {/* History timeline */}
+          <div>
+            <p className="text-[13px] font-bold text-[var(--color-foreground)] mb-2">Historique des révisions</p>
+            {logs === null ? (
+              <p className="text-sm text-[var(--color-muted-foreground)] text-center py-4">Chargement…</p>
+            ) : logs.length === 0 ? (
+              <p className="text-sm text-[var(--color-muted-foreground)] text-center py-4">Pas encore révisée.</p>
+            ) : (
+              <ol className="space-y-2">
+                {logs.map((log) => (
+                  <li key={log.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-secondary)]">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-[var(--color-foreground)]">
+                        {log.reviewed_at ? format(parseISO(log.reviewed_at), 'dd MMM yyyy · HH:mm', { locale: fr }) : '—'}
+                      </p>
+                      <p className="text-[12px] text-[var(--color-muted-foreground)] mt-0.5">Intervalle → {log.interval_after} j</p>
+                    </div>
+                    <span className="text-amber-500 text-[13px] tracking-tight flex-shrink-0">{QUALITY_STARS(log.quality)}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <Button onClick={() => { haptic.select(); onReviewNow(card); onClose() }} className="flex-1 gap-2">
+              <Brain className="w-4 h-4" /> Réviser
+            </Button>
+            <Button variant="outline" onClick={() => { haptic.select(); setMode('edit') }} className="gap-2">
+              <Pencil className="w-4 h-4" /> Éditer
+            </Button>
+            <Button variant="outline" onClick={remove} className="text-rose-500">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       )}
 
       {/* ── EDIT ──────────────────────────────────────────────── */}
       {mode === 'edit' && (
         <div className="space-y-4">
-          <BackBtn onClick={() => setMode('menu')} />
+          <BackBtn onClick={() => setMode('detail')} />
           <div>
             <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Question (recto)</label>
             <Textarea value={form.front} onChange={(e) => setForm({ ...form, front: e.target.value })} className="min-h-[70px]" />
@@ -161,42 +191,6 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
           <Button onClick={saveEdit} className="w-full" disabled={!form.front.trim() || saving}>
             Enregistrer
           </Button>
-        </div>
-      )}
-
-      {/* ── HISTORY ───────────────────────────────────────────── */}
-      {mode === 'history' && (
-        <div className="space-y-4">
-          <BackBtn onClick={() => setMode('menu')} />
-
-          {/* Current SM-2 state — makes the algorithm legible */}
-          <div className="grid grid-cols-3 gap-2">
-            <Stat Icon={Clock}       label="Prochaine"  value={format(card.next_review_date, 'dd MMM', { locale: fr })} />
-            <Stat Icon={TrendingUp}  label="Facilité"   value={card.easiness_factor.toFixed(2)} />
-            <Stat Icon={Star}        label="Révisions"  value={`${card.repetition}`} />
-          </div>
-
-          {logs === null ? (
-            <p className="text-sm text-[var(--color-muted-foreground)] text-center py-6">Chargement…</p>
-          ) : logs.length === 0 ? (
-            <p className="text-sm text-[var(--color-muted-foreground)] text-center py-6">Aucune révision enregistrée pour l'instant.</p>
-          ) : (
-            <ol className="space-y-2">
-              {logs.map((log) => (
-                <li key={log.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-secondary)]">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[var(--color-foreground)]">
-                      {log.reviewed_at ? format(parseISO(log.reviewed_at), 'dd MMM yyyy · HH:mm', { locale: fr }) : '—'}
-                    </p>
-                    <p className="text-[12px] text-[var(--color-muted-foreground)] mt-0.5">
-                      Intervalle → {log.interval_after} j
-                    </p>
-                  </div>
-                  <span className="text-amber-500 text-[13px] tracking-tight flex-shrink-0">{QUALITY_STARS(log.quality)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
         </div>
       )}
     </BottomSheet>

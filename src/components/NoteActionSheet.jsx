@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { mutate } from 'swr'
-import { Pencil, Repeat, Trash2, ChevronRight, ChevronLeft, Plus, Check } from 'lucide-react'
+import { Pencil, Repeat, Trash2, ChevronLeft, Plus, Check, Sparkles, Search, BookOpen, Edit3 } from 'lucide-react'
 import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
 import { API, apiFetch } from '../lib/api'
@@ -11,16 +11,16 @@ import { cn } from '../lib/utils'
 const masteryColor = (lvl) =>
   lvl >= 80 ? 'text-emerald-400' : lvl >= 60 ? 'text-blue-400' : lvl >= 40 ? 'text-amber-400' : 'text-rose-400'
 
-// Contextual actions for a Feynman note. Modes: menu → edit | convert.
+// Full detail view for a Feynman note. Modes: detail (read) → edit | convert.
 export default function NoteActionSheet({ open, onClose, note, disciplines, bySlug }) {
-  const [mode, setMode] = useState('menu')
+  const [mode, setMode] = useState('detail')
   const [form, setForm] = useState(null)
   const [converted, setConverted] = useState({})   // gap index → true once a card is created
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (note) {
-      setMode('menu')
+      setMode('detail')
       setConverted({})
       setForm({
         concept: note.concept,
@@ -36,6 +36,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
 
   if (!note || !form) return null
   const config = bySlug[note.discipline] ?? { name: note.discipline, color: '#3B82F6', icon: 'BookOpen' }
+  const DiscIcon = resolveIcon(config.icon)
 
   const saveEdit = async () => {
     if (!form.concept.trim() || saving) return
@@ -113,56 +114,87 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
   const addField = (key) => setForm({ ...form, [key]: [...form[key], ''] })
 
   const realGaps = (note.gaps || []).filter((g) => g.trim())
-  const title = mode === 'edit' ? 'Éditer la note' : mode === 'convert' ? 'Convertir en cartes' : note.concept
-
-  const Action = ({ Icon, label, sub, onClick, danger, disabled }) => (
-    <button
-      onClick={() => { if (disabled) return; haptic.select(); onClick() }}
-      disabled={disabled}
-      className={cn(
-        'w-full flex items-center gap-3 min-h-[56px] px-3 rounded-2xl text-left transition-all active:scale-[0.98]',
-        disabled && 'opacity-40',
-        danger ? 'active:bg-rose-500/10' : 'active:bg-[var(--color-secondary)]',
-      )}
-    >
-      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', danger ? 'bg-rose-500/15' : 'bg-[var(--color-secondary)]')}>
-        <Icon className={cn('w-5 h-5', danger ? 'text-rose-500' : 'text-[var(--color-foreground)]')} strokeWidth={1.75} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className={cn('text-[15px] font-semibold leading-tight', danger ? 'text-rose-500' : 'text-[var(--color-foreground)]')}>{label}</p>
-        {sub && <p className="text-[12px] text-[var(--color-muted-foreground)] mt-0.5 truncate">{sub}</p>}
-      </div>
-      <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)] flex-shrink-0" />
-    </button>
-  )
+  const realAnalogies = (note.analogies || []).filter((a) => a.trim())
+  const title = mode === 'edit' ? 'Éditer la note' : mode === 'convert' ? 'Convertir en cartes' : 'Détail de la note'
 
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
-      {/* ── MENU ──────────────────────────────────────────────── */}
-      {mode === 'menu' && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${config.color}20`, color: config.color }}>
+      {/* ── DETAIL (read) ─────────────────────────────────────── */}
+      {mode === 'detail' && (
+        <div className="space-y-5">
+          {/* Discipline + mastery */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${config.color}20`, color: config.color }}>
+              <DiscIcon className="w-3.5 h-3.5" />
               {config.name}
             </span>
-            <span className={cn('text-[11px] font-semibold', masteryColor(note.masteryLevel))}>{note.masteryLevel}% maîtrisé</span>
+            <span className={cn('text-[12px] font-semibold', masteryColor(note.masteryLevel))}>{note.masteryLevel}% maîtrisé</span>
           </div>
-          <Action Icon={Pencil} label="Éditer" sub="Toutes les étapes + maîtrise" onClick={() => setMode('edit')} />
-          <Action
-            Icon={Repeat}
-            label="Convertir en cartes"
-            sub={realGaps.length ? `${realGaps.length} lacune(s) → cartes SM-2` : 'Aucune lacune à convertir'}
-            onClick={() => setMode('convert')}
-            disabled={realGaps.length === 0}
-          />
-          <Action Icon={Trash2} label="Supprimer" sub="Action définitive" onClick={remove} danger />
+
+          <h3 className="text-[18px] font-bold text-[var(--color-foreground)] leading-tight">{note.concept}</h3>
+
+          {/* Step 1 — simple explanation */}
+          {note.simpleExplanation && (
+            <Step Icon={Edit3} color="#3b82f6" label="Explication simple">
+              <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{note.simpleExplanation}</p>
+            </Step>
+          )}
+
+          {/* Step 2 — analogies */}
+          {realAnalogies.length > 0 && (
+            <Step Icon={Sparkles} color="#f59e0b" label="Analogies">
+              <div className="flex flex-wrap gap-2">
+                {realAnalogies.map((a, i) => (
+                  <span key={i} className="text-[13px] px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-500">{a}</span>
+                ))}
+              </div>
+            </Step>
+          )}
+
+          {/* Step 3 — gaps */}
+          {realGaps.length > 0 && (
+            <Step Icon={Search} color="#f43f5e" label="Lacunes">
+              <ul className="space-y-1.5">
+                {realGaps.map((g, i) => (
+                  <li key={i} className="text-[14px] text-[var(--color-foreground)] flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 flex-shrink-0" />{g}
+                  </li>
+                ))}
+              </ul>
+            </Step>
+          )}
+
+          {/* Step 4 — refined */}
+          {note.refinedExplanation && (
+            <Step Icon={BookOpen} color="#10b981" label="Explication raffinée">
+              <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{note.refinedExplanation}</p>
+            </Step>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <Button onClick={() => { haptic.select(); setMode('edit') }} className="flex-1 gap-2">
+              <Pencil className="w-4 h-4" /> Éditer
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { if (!realGaps.length) return; haptic.select(); setMode('convert') }}
+              disabled={realGaps.length === 0}
+              className="gap-2"
+            >
+              <Repeat className="w-4 h-4" /> Convertir
+            </Button>
+            <Button variant="outline" onClick={remove} className="text-rose-500">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       )}
 
       {/* ── EDIT ──────────────────────────────────────────────── */}
       {mode === 'edit' && (
         <div className="space-y-4">
-          <BackBtn onClick={() => setMode('menu')} />
+          <BackBtn onClick={() => setMode('detail')} />
           <div>
             <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Concept</label>
             <Input value={form.concept} onChange={(e) => setForm({ ...form, concept: e.target.value })} />
@@ -233,7 +265,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
       {/* ── CONVERT ───────────────────────────────────────────── */}
       {mode === 'convert' && (
         <div className="space-y-4">
-          <BackBtn onClick={() => setMode('menu')} />
+          <BackBtn onClick={() => setMode('detail')} />
           <p className="text-[13px] text-[var(--color-muted-foreground)]">
             Chaque lacune devient une carte SM-2 (réponse à compléter ensuite).
           </p>
@@ -267,5 +299,18 @@ function BackBtn({ onClick }) {
     >
       <ChevronLeft className="w-4 h-4" /> Retour
     </button>
+  )
+}
+
+// One labelled Feynman step block in the detail read view.
+function Step({ Icon, color, label, children }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-4 h-4" style={{ color }} />
+        <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">{label}</p>
+      </div>
+      {children}
+    </div>
   )
 }
