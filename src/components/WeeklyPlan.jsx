@@ -9,7 +9,7 @@ import { fr } from 'date-fns/locale'
 import useSWR, { mutate } from 'swr'
 import { Card, CardContent, Button } from '../lib/ui'
 import { cn } from '../lib/utils'
-import { API, fetcher } from '../lib/api'
+import { API, fetcher, apiFetch } from '../lib/api'
 import { isCompleted, getProgress } from '../lib/taskBridge'
 import useStore from '../store/useStore'
 

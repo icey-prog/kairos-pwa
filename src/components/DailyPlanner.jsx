@@ -4,7 +4,7 @@ import { Plus, Link, ExternalLink, X, Bell, Play, Calendar } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import useStore from '../store/useStore'
-import { API, fetcher } from '../lib/api'
+import { API, fetcher, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
 
 const isUrl = (str) => str.startsWith('http://') || str.startsWith('https://')

@@ -14,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../lib/ui'
 import { cn } from '../lib/utils'
-import { API, fetcher } from '../lib/api'
+import { API, fetcher, apiFetch } from '../lib/api'
 import { useDisciplines } from '../hooks/useDisciplines'
 import { resolveIcon } from '../lib/disciplineIcons'
 import DisciplineChips from './DisciplineChips'

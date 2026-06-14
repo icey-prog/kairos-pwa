@@ -3,7 +3,7 @@ import { Play, Pause, RotateCcw, Zap, ChevronRight } from 'lucide-react'
 import { mutate } from 'swr'
 import useSWR from 'swr'
 import useStore from '../store/useStore'
-import { API, fetcher } from '../lib/api'
+import { API, fetcher, apiFetch } from '../lib/api'
 import { adaptTask } from '../lib/taskBridge'
 import { toast } from 'sonner'
 

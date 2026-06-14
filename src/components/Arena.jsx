@@ -15,7 +15,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import useStore from '../store/useStore'
-import { API, fetcher } from '../lib/api'
+import { API, fetcher, apiFetch } from '../lib/api'
 import { isCompleted, getProgress } from '../lib/taskBridge'
 import { haptic } from '../lib/haptic'
 

@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../lib/ui'
 import { cn } from '../lib/utils'
-import { API, fetcher } from '../lib/api'
+import { API, fetcher, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
 import useStore from '../store/useStore'
 import { useDisciplines } from '../hooks/useDisciplines'

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BatteryLow, Battery, BatteryMedium, BatteryFull, Zap, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
-import { API } from '../lib/api'
+import { API, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
 
 // Solo-user display name — update when auth is added
