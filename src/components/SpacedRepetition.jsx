@@ -20,6 +20,7 @@ import { resolveIcon } from '../lib/disciplineIcons'
 import DisciplineChips from './DisciplineChips'
 import NewDisciplineDialog from './NewDisciplineDialog'
 import CardActionSheet from './CardActionSheet'
+import KnowledgeBadges from './KnowledgeBadges'
 
 const ADD_DISCIPLINE = '__add__'   // sentinel value for the "+ Nouvelle discipline" select entry
 
@@ -557,6 +558,7 @@ export default function SpacedRepetition() {
                         <RotateCcw className="w-3 h-3" />
                         {item.repetition}x
                       </span>
+                      <KnowledgeBadges item={item} compact />
                     </div>
                   </div>
                   {isDue && <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse flex-shrink-0" />}

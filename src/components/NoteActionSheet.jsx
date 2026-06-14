@@ -3,6 +3,7 @@ import { mutate } from 'swr'
 import { Pencil, Repeat, Trash2, ChevronLeft, Plus, Check, Sparkles, Search, BookOpen, Edit3 } from 'lucide-react'
 import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
+import KnowledgeBadges from './KnowledgeBadges'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -130,6 +131,9 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
             </span>
             <span className={cn('text-[12px] font-semibold', masteryColor(note.masteryLevel))}>{note.masteryLevel}% maîtrisé</span>
           </div>
+
+          {/* Knowledge taxonomy badges */}
+          <KnowledgeBadges item={note} />
 
           <h3 className="text-[18px] font-bold text-[var(--color-foreground)] leading-tight">{note.concept}</h3>
 

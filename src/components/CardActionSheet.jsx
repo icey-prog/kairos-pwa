@@ -3,10 +3,11 @@ import { mutate } from 'swr'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import {
-  Brain, Pencil, Trash2, Star, Clock, TrendingUp, ChevronLeft,
+  Brain, Pencil, Trash2, Star, Clock, TrendingUp, ChevronLeft, Bug,
 } from 'lucide-react'
 import { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
+import KnowledgeBadges from './KnowledgeBadges'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -97,6 +98,9 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
             )}
           </div>
 
+          {/* Knowledge taxonomy badges */}
+          <KnowledgeBadges item={card} />
+
           {/* Question / Answer */}
           <div className="space-y-3">
             <div className="rounded-2xl border border-[var(--color-border)] p-4">
@@ -112,6 +116,19 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
               )}
             </div>
           </div>
+
+          {/* Bug-fix breakdown — only for bug_fix cards with detail */}
+          {card.knowledge_category === 'bug_fix' && (card.bug_why || card.bug_fix_how || card.bug_principles) && (
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Bug className="w-4 h-4 text-rose-500" />
+                <p className="text-[13px] font-bold text-rose-500">Bug Fix</p>
+              </div>
+              {card.bug_why && <BugRow label="Pourquoi" value={card.bug_why} />}
+              {card.bug_fix_how && <BugRow label="Corrigé comment" value={card.bug_fix_how} />}
+              {card.bug_principles && <BugRow label="Principes" value={card.bug_principles} />}
+            </div>
+          )}
 
           {/* SM-2 state */}
           <div className="grid grid-cols-3 gap-2">
@@ -214,6 +231,15 @@ function Stat({ Icon, label, value }) {
       <Icon className="w-4 h-4 mx-auto mb-1 text-[var(--color-muted-foreground)]" />
       <p className="text-[14px] font-bold text-[var(--color-foreground)] leading-none">{value}</p>
       <p className="text-[10px] text-[var(--color-muted-foreground)] mt-1">{label}</p>
+    </div>
+  )
+}
+
+function BugRow({ label, value }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-500/80">{label}</p>
+      <p className="text-[14px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed mt-0.5">{value}</p>
     </div>
   )
 }
