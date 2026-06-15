@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle,
@@ -14,7 +14,6 @@ import {
 import { cn } from '../lib/utils'
 import { API, fetcher, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
-import useStore from '../store/useStore'
 import { useDisciplines } from '../hooks/useDisciplines'
 import { resolveIcon } from '../lib/disciplineIcons'
 import NewDisciplineDialog from './NewDisciplineDialog'
@@ -62,8 +61,6 @@ const qualityLabels = [
 export default function SpacedRepetition() {
   const { data: rawItems } = useSWR(`${API}/spaced-cards`, fetcher, { refreshInterval: 10000 })
   const { disciplines, bySlug } = useDisciplines()
-  const pendingReviewSlug = useStore((s) => s.pendingReviewSlug)
-  const setPendingReviewSlug = useStore((s) => s.setPendingReviewSlug)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewQueue, setReviewQueue] = useState([])      // snapshot — frozen at session start
@@ -143,16 +140,6 @@ export default function SpacedRepetition() {
     setShowAnswer(false)
   }
   const startReview = () => startReviewWith(dueToday)
-
-  // DisciplineDetail CTA → drill into the discipline + auto-start its review.
-  useEffect(() => {
-    if (!pendingReviewSlug) return
-    setHubSlug(pendingReviewSlug)
-    const due = items.filter((c) => c.discipline === pendingReviewSlug && isCardDue(c.next_review_date, today))
-    if (due.length) startReviewWith(due)
-    setPendingReviewSlug(null)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingReviewSlug, rawItems])
 
   // Award XP once a full session is completed (+5/card, capped at +50).
   const awardSessionXp = async (cardCount) => {
