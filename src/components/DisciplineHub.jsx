@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react'
-import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
+import DisciplineGlyph from './DisciplineGlyph'
 
 // Level-1 of the revision hub: a card per discipline that has items.
 // `stats[slug] = { total, sub }` — total = item count, sub = secondary line (e.g. "3 à réviser").
@@ -18,7 +18,6 @@ export default function DisciplineHub({ disciplines, stats, onSelect, emptyLabel
   return (
     <div className="grid grid-cols-1 gap-3">
       {withItems.map((d) => {
-        const Icon = resolveIcon(d.icon)
         const s = stats[d.slug] || {}
         return (
           <button
@@ -30,7 +29,7 @@ export default function DisciplineHub({ disciplines, stats, onSelect, emptyLabel
               className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
               style={{ background: `linear-gradient(135deg, ${d.color}30, ${d.color}10)` }}
             >
-              <Icon className="w-6 h-6" style={{ color: d.color }} />
+              <DisciplineGlyph discipline={d} size={26} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[15px] font-bold text-[var(--color-foreground)] truncate">{d.name}</p>

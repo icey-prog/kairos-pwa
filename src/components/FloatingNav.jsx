@@ -3,6 +3,7 @@ import { Timer, Brain, TrendingUp, Sparkles, CalendarDays, BookOpen, Pencil, Tro
 import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { haptic } from '../lib/haptic'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 // ── Quick-action sheet items (bottom sheet) ──────────────────────────────────
 const QUICK_ACTIONS = [
@@ -85,6 +86,8 @@ export default function FloatingNav() {
   const [open, setOpen]   = useState(false)
   const [sheet, setSheet] = useState(false)
   const [dark, setDark]   = useState(false)
+
+  useScrollLock(sheet || open)   // freeze the page behind the sheet / open dial
 
   useEffect(() => {
     const saved = localStorage.getItem('theme') === 'dark'

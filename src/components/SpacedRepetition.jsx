@@ -21,6 +21,7 @@ import CardActionSheet from './CardActionSheet'
 import KnowledgeBadges from './KnowledgeBadges'
 import DisciplineHub from './DisciplineHub'
 import KnowledgeSections from './KnowledgeSections'
+import DisciplineGlyph from './DisciplineGlyph'
 
 const ADD_DISCIPLINE = '__add__'   // sentinel value for the "+ Nouvelle discipline" select entry
 
@@ -328,7 +329,6 @@ export default function SpacedRepetition() {
   }
 
   const headerDiscipline = hubSlug ? (bySlug[hubSlug] ?? { name: hubSlug, color: '#3B82F6', icon: 'BookOpen' }) : null
-  const HeaderIcon = headerDiscipline ? resolveIcon(headerDiscipline.icon) : null
 
   // ── Hub / discipline UI ─────────────────────────────────────────────────────
   return (
@@ -392,7 +392,7 @@ export default function SpacedRepetition() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
               style={{ background: `linear-gradient(135deg, ${headerDiscipline.color}30, ${headerDiscipline.color}10)` }}>
-              <HeaderIcon className="w-6 h-6" style={{ color: headerDiscipline.color }} />
+              <DisciplineGlyph discipline={headerDiscipline} size={26} />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold tracking-tight text-[var(--color-foreground)] truncate">{headerDiscipline.name}</h1>

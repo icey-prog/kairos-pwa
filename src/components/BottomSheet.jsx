@@ -1,10 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { haptic } from '../lib/haptic'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 // Shared mobile bottom-sheet primitive — one consistent surface for every contextual menu.
 // Drag handle + spring-up + backdrop blur, matching the FloatingNav sheet aesthetic.
 export default function BottomSheet({ open, onClose, title, children }) {
+  useScrollLock(open)   // freeze the page behind the sheet
   const close = () => { haptic.light(); onClose() }
 
   return (
