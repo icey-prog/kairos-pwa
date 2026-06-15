@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { mutate } from 'swr'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { motion } from 'framer-motion'
 import {
-  Brain, Pencil, Trash2, Star, Clock, TrendingUp, ChevronLeft, Bug,
+  Brain, Pencil, Trash2, Star, Clock, TrendingUp, ChevronLeft, Bug, Eye,
 } from 'lucide-react'
 import { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
@@ -21,11 +22,13 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
   const [form, setForm] = useState({ front: '', back: '', discipline: '' })
   const [logs, setLogs] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [revealed, setRevealed] = useState(false)   // answer hidden until user tries to recall
 
   // Reset to detail + hydrate edit form + load history each time a card opens.
   useEffect(() => {
     if (!card) return
     setMode('detail')
+    setRevealed(false)
     setForm({ front: card.front, back: card.back || '', discipline: card.discipline })
     setLogs(null)
     let cancelled = false
@@ -101,33 +104,46 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
           {/* Knowledge taxonomy badges */}
           <KnowledgeBadges item={card} />
 
-          {/* Question / Answer */}
-          <div className="space-y-3">
-            <div className="rounded-2xl border border-[var(--color-border)] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Question</p>
-              <p className="text-[16px] font-semibold text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.front}</p>
-            </div>
-            <div className="rounded-2xl bg-[var(--color-secondary)] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Réponse</p>
-              {card.back ? (
-                <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.back}</p>
-              ) : (
-                <p className="text-sm text-[var(--color-muted-foreground)] italic">Aucune réponse — édite la carte pour la compléter.</p>
-              )}
-            </div>
+          {/* Question — always visible */}
+          <div className="rounded-2xl border border-[var(--color-border)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Question</p>
+            <p className="text-[16px] font-semibold text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.front}</p>
           </div>
 
-          {/* Bug-fix breakdown — only for bug_fix cards with detail */}
-          {card.knowledge_category === 'bug_fix' && (card.bug_why || card.bug_fix_how || card.bug_principles) && (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Bug className="w-4 h-4 text-rose-500" />
-                <p className="text-[13px] font-bold text-rose-500">Bug Fix</p>
+          {/* Answer — hidden until reveal (try to recall first) */}
+          {!revealed ? (
+            <Button onClick={() => { haptic.light(); setRevealed(true) }} className="w-full gap-2" size="lg">
+              <Eye className="w-5 h-5" /> Montrer la réponse
+            </Button>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+              className="space-y-4"
+            >
+              <div className="rounded-2xl bg-[var(--color-secondary)] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Réponse</p>
+                {card.back ? (
+                  <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.back}</p>
+                ) : (
+                  <p className="text-sm text-[var(--color-muted-foreground)] italic">Aucune réponse — édite la carte pour la compléter.</p>
+                )}
               </div>
-              {card.bug_why && <BugRow label="Pourquoi" value={card.bug_why} />}
-              {card.bug_fix_how && <BugRow label="Corrigé comment" value={card.bug_fix_how} />}
-              {card.bug_principles && <BugRow label="Principes" value={card.bug_principles} />}
-            </div>
+
+              {/* Bug-fix breakdown — only for bug_fix cards with detail */}
+              {card.knowledge_category === 'bug_fix' && (card.bug_why || card.bug_fix_how || card.bug_principles) && (
+                <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Bug className="w-4 h-4 text-rose-500" />
+                    <p className="text-[13px] font-bold text-rose-500">Bug Fix</p>
+                  </div>
+                  {card.bug_why && <BugRow label="Pourquoi" value={card.bug_why} />}
+                  {card.bug_fix_how && <BugRow label="Corrigé comment" value={card.bug_fix_how} />}
+                  {card.bug_principles && <BugRow label="Principes" value={card.bug_principles} />}
+                </div>
+              )}
+            </motion.div>
           )}
 
           {/* SM-2 state */}

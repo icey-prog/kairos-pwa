@@ -1,27 +1,25 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
-  Lightbulb, Plus, Search, BookOpen,
-  Star, Edit3, Sparkles, ChevronDown, ChevronUp, ChevronRight, MoreHorizontal,
+  Lightbulb, Plus, Search, BookOpen, Edit3, Sparkles, ChevronRight, ChevronLeft,
 } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
-import { fr } from 'date-fns/locale'
 import useSWR, { mutate } from 'swr'
 import {
-  Card, CardContent, Badge,
+  Card, CardContent,
   Button, Input, Textarea,
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../lib/ui'
 import { cn } from '../lib/utils'
 import { API, fetcher, apiFetch } from '../lib/api'
 import { useDisciplines } from '../hooks/useDisciplines'
 import { resolveIcon } from '../lib/disciplineIcons'
-import DisciplineChips from './DisciplineChips'
 import NewDisciplineDialog from './NewDisciplineDialog'
 import NoteActionSheet from './NoteActionSheet'
+import KnowledgeBadges from './KnowledgeBadges'
+import DisciplineHub from './DisciplineHub'
+import KnowledgeSections from './KnowledgeSections'
 import { haptic } from '../lib/haptic'
-import useStore from '../store/useStore'
 
 const ADD_DISCIPLINE = '__add__'
 
@@ -45,11 +43,9 @@ const EMPTY_NOTE = {
 export default function FeynmanNotes() {
   const { data: rawNotes } = useSWR(`${API}/feynman`, fetcher, { refreshInterval: 10000 })
   const { disciplines, bySlug } = useDisciplines()
-  const openDiscipline = useStore((s) => s.openDiscipline)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [expandedNote, setExpandedNote] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDiscipline, setSelectedDiscipline] = useState('all')
+  const [hubSlug, setHubSlug] = useState(null)        // null = discipline hub
+  const [search, setSearch] = useState('')
   const [newDisciplineOpen, setNewDisciplineOpen] = useState(false)
   const [activeNote, setActiveNote] = useState(null)
   const [newNote, setNewNote] = useState(EMPTY_NOTE)
@@ -57,15 +53,8 @@ export default function FeynmanNotes() {
   const notes = (rawNotes || []).map((n) => {
     let analogies = []
     let gaps = []
-    
-    try {
-      if (n.analogies) analogies = JSON.parse(n.analogies)
-    } catch (_) {}
-    
-    try {
-      if (n.gaps) gaps = JSON.parse(n.gaps)
-    } catch (_) {}
-
+    try { if (n.analogies) analogies = JSON.parse(n.analogies) } catch (_) {}
+    try { if (n.gaps) gaps = JSON.parse(n.gaps) } catch (_) {}
     return {
       ...n,
       concept: n.topic,
@@ -74,9 +63,28 @@ export default function FeynmanNotes() {
       gaps,
       refinedExplanation: n.refined_explanation,
       masteryLevel: n.mastery_level,
-      createdAt: parseISO(n.created_at),
     }
   })
+
+  // Per-discipline stats for the hub cards.
+  const hubStats = {}
+  for (const n of notes) {
+    const s = (hubStats[n.discipline] ||= { total: 0, _sum: 0 })
+    s.total += 1
+    s._sum += n.masteryLevel || 0
+  }
+  for (const slug in hubStats) {
+    const s = hubStats[slug]
+    s.sub = `${Math.round(s._sum / s.total)}% maîtrise moy.`
+  }
+
+  // Notes of the open discipline (level-2) + in-view search.
+  const q = search.trim().toLowerCase()
+  const disciplineNotes = hubSlug
+    ? notes.filter((n) =>
+        n.discipline === hubSlug &&
+        (!q || `${n.concept} ${n.simpleExplanation || ''}`.toLowerCase().includes(q)))
+    : []
 
   const handleSubmit = async () => {
     if (!newNote.discipline || !newNote.concept || !newNote.simpleExplanation) return
@@ -113,18 +121,26 @@ export default function FeynmanNotes() {
     const g = [...newNote.gaps]; g[i] = v; setNewNote({ ...newNote, gaps: g })
   }
 
-  const filtered = notes.filter((n) => {
-    const matchSearch = n.concept.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.simpleExplanation.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchDiscipline = selectedDiscipline === 'all' || n.discipline === selectedDiscipline
-    return matchSearch && matchDiscipline
-  })
+  // ── Note row (level-2, inside a knowledge sub-section) ───────────────────────
+  const noteRow = (note) => (
+    <button
+      key={note.id}
+      onClick={() => { haptic.light(); setActiveNote(note) }}
+      className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[var(--color-secondary)] transition-colors"
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-[14px] font-medium text-[var(--color-foreground)] truncate">{note.concept}</p>
+        <div className="flex items-center gap-2 mt-1 text-[11px]">
+          <span className={cn('font-semibold', getMasteryColor(note.masteryLevel))}>{note.masteryLevel}% maîtrisé</span>
+          <KnowledgeBadges item={note} compact />
+        </div>
+      </div>
+      <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)] flex-shrink-0" />
+    </button>
+  )
 
-  const counts = notes.reduce((acc, n) => {
-    acc.all = (acc.all || 0) + 1
-    acc[n.discipline] = (acc[n.discipline] || 0) + 1
-    return acc
-  }, {})
+  const headerDiscipline = hubSlug ? (bySlug[hubSlug] ?? { name: hubSlug, color: '#3B82F6', icon: 'BookOpen' }) : null
+  const HeaderIcon = headerDiscipline ? resolveIcon(headerDiscipline.icon) : null
 
   return (
     <motion.div
@@ -133,336 +149,216 @@ export default function FeynmanNotes() {
       transition={{ type: 'spring', damping: 26, stiffness: 260 }}
       className="space-y-5 px-5 py-4 pb-24"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-foreground)]">Notes Feynman</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">Explique simplement pour maîtriser</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nouvelle note
+      {hubSlug === null ? (
+        // ─────────── LEVEL 1 — discipline hub ───────────
+        <>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--color-foreground)]">Notes Feynman</h1>
+              <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">Explique simplement pour maîtriser</p>
+            </div>
+            <Button className="gap-2 flex-shrink-0" onClick={() => setIsDialogOpen(true)}>
+              <Plus className="w-4 h-4" /> Note
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-rose-400" />
-                Méthode Feynman
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              {/* Discipline */}
-              <div>
-                <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Discipline</label>
-                <Select
-                  value={newNote.discipline}
-                  onValueChange={(v) => {
-                    if (v === ADD_DISCIPLINE) { setNewDisciplineOpen(true); return }
-                    setNewNote({ ...newNote, discipline: v })
-                  }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Choisis une discipline" /></SelectTrigger>
-                  <SelectContent>
-                    {disciplines.map((d) => {
-                      const Icon = resolveIcon(d.icon)
-                      return (
-                        <SelectItem key={d.slug} value={d.slug}>
-                          <Icon className="w-4 h-4" style={{ color: d.color }} />
-                          {d.name}
-                        </SelectItem>
-                      )
-                    })}
-                    <SelectItem value={ADD_DISCIPLINE}>
-                      <Plus className="w-4 h-4" />
-                      Nouvelle discipline
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          </div>
 
-              {/* Concept */}
-              <div>
-                <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Concept à maîtriser</label>
-                <Input
-                  placeholder="Ex: Les closures en JavaScript..."
-                  value={newNote.concept}
-                  onChange={(e) => setNewNote({ ...newNote, concept: e.target.value })}
-                />
-              </div>
-
-              {/* Step 1 */}
-              <div>
-                <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
-                  <Edit3 className="w-4 h-4 text-blue-400" />
-                  Étape 1 : Explique comme à un enfant
-                </label>
-                <Textarea
-                  placeholder="Utilise des mots simples, pas de jargon..."
-                  value={newNote.simpleExplanation}
-                  onChange={(e) => setNewNote({ ...newNote, simpleExplanation: e.target.value })}
-                  className="min-h-[90px]"
-                />
-              </div>
-
-              {/* Analogies */}
-              <div>
-                <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  Étape 2 : Analogies (optionnel)
-                </label>
-                {newNote.analogies.map((a, i) => (
-                  <div key={i} className="mb-2">
-                    <Input placeholder={`Analogie ${i + 1}...`} value={a} onChange={(e) => updateAnalogy(i, e.target.value)} />
-                  </div>
-                ))}
-                <Button type="button" variant="outline" size="sm" onClick={addAnalogy} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" /> Ajouter une analogie
+          {notes.length === 0 ? (
+            <Card className="glass border-0">
+              <CardContent className="p-10 text-center">
+                <Lightbulb className="w-14 h-14 mx-auto mb-3 opacity-25" />
+                <h3 className="text-base font-medium text-[var(--color-foreground)] mb-2">Commence ta collection Feynman</h3>
+                <Button onClick={() => setIsDialogOpen(true)} className="gap-2 mt-2">
+                  <Plus className="w-4 h-4" /> Créer ma première note
                 </Button>
-              </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <DisciplineHub
+              disciplines={disciplines}
+              stats={hubStats}
+              onSelect={(slug) => { setSearch(''); setHubSlug(slug) }}
+              emptyLabel="Aucune note pour l'instant."
+            />
+          )}
+        </>
+      ) : (
+        // ─────────── LEVEL 2 — discipline view (grouped sub-sections) ───────────
+        <>
+          <button
+            onClick={() => { haptic.light(); setHubSlug(null) }}
+            className="flex items-center gap-1 min-h-[40px] -ml-1 text-[14px] font-medium text-[var(--color-muted-foreground)] active:scale-95 transition-transform"
+          >
+            <ChevronLeft className="w-5 h-5" /> Disciplines
+          </button>
 
-              {/* Gaps */}
-              <div>
-                <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
-                  <Search className="w-4 h-4 text-rose-400" />
-                  Étape 3 : Lacunes (optionnel)
-                </label>
-                {newNote.gaps.map((g, i) => (
-                  <div key={i} className="mb-2">
-                    <Input placeholder={`Lacune ${i + 1}...`} value={g} onChange={(e) => updateGap(i, e.target.value)} />
-                  </div>
-                ))}
-                <Button type="button" variant="outline" size="sm" onClick={addGap} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" /> Ajouter une lacune
-                </Button>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${headerDiscipline.color}30, ${headerDiscipline.color}10)` }}>
+              <HeaderIcon className="w-6 h-6" style={{ color: headerDiscipline.color }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold tracking-tight text-[var(--color-foreground)] truncate">{headerDiscipline.name}</h1>
+              <p className="text-[12px] text-[var(--color-muted-foreground)]">
+                {hubStats[hubSlug]?.total ?? 0} notes · {hubStats[hubSlug]?.sub ?? ''}
+              </p>
+            </div>
+          </div>
 
-              {/* Refined explanation */}
-              <div>
-                <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
-                  <BookOpen className="w-4 h-4 text-emerald-400" />
-                  Étape 4 : Explication raffinée (optionnel)
-                </label>
-                <Textarea
-                  placeholder="Après avoir comblé les lacunes, réécris..."
-                  value={newNote.refinedExplanation}
-                  onChange={(e) => setNewNote({ ...newNote, refinedExplanation: e.target.value })}
-                  className="min-h-[70px]"
-                />
-              </div>
+          {/* In-discipline search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted-foreground)]" />
+            <Input
+              placeholder="Rechercher dans cette discipline..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-              {/* Mastery slider */}
-              <div>
-                <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Niveau de maîtrise estimé</label>
-                <input
-                  type="range" min="0" max="100"
-                  value={newNote.masteryLevel}
-                  onChange={(e) => setNewNote({ ...newNote, masteryLevel: parseInt(e.target.value) })}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-[var(--color-muted-foreground)] mt-1">
-                  <span>Débutant</span>
-                  <span className={getMasteryColor(newNote.masteryLevel)}>{newNote.masteryLevel}%</span>
-                  <span>Expert</span>
-                </div>
-              </div>
+          {disciplineNotes.length === 0 ? (
+            <p className="text-sm text-[var(--color-muted-foreground)] text-center py-8">Aucune note ne correspond.</p>
+          ) : (
+            <KnowledgeSections items={disciplineNotes} renderItem={noteRow} />
+          )}
+        </>
+      )}
 
-              <Button
-                onClick={handleSubmit}
-                className="w-full gap-2"
-                disabled={!newNote.discipline || !newNote.concept || !newNote.simpleExplanation}
+      {/* ── Create-note dialog (controlled, shared) ── */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-rose-400" />
+              Méthode Feynman
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {/* Discipline */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Discipline</label>
+              <Select
+                value={newNote.discipline}
+                onValueChange={(v) => {
+                  if (v === ADD_DISCIPLINE) { setNewDisciplineOpen(true); return }
+                  setNewNote({ ...newNote, discipline: v })
+                }}
               >
-                <Lightbulb className="w-4 h-4" />
-                Enregistrer la note
+                <SelectTrigger><SelectValue placeholder="Choisis une discipline" /></SelectTrigger>
+                <SelectContent>
+                  {disciplines.map((d) => {
+                    const Icon = resolveIcon(d.icon)
+                    return (
+                      <SelectItem key={d.slug} value={d.slug}>
+                        <Icon className="w-4 h-4" style={{ color: d.color }} />
+                        {d.name}
+                      </SelectItem>
+                    )
+                  })}
+                  <SelectItem value={ADD_DISCIPLINE}>
+                    <Plus className="w-4 h-4" />
+                    Nouvelle discipline
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Concept */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Concept à maîtriser</label>
+              <Input
+                placeholder="Ex: Les closures en JavaScript..."
+                value={newNote.concept}
+                onChange={(e) => setNewNote({ ...newNote, concept: e.target.value })}
+              />
+            </div>
+
+            {/* Step 1 */}
+            <div>
+              <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
+                <Edit3 className="w-4 h-4 text-blue-400" />
+                Étape 1 : Explique comme à un enfant
+              </label>
+              <Textarea
+                placeholder="Utilise des mots simples, pas de jargon..."
+                value={newNote.simpleExplanation}
+                onChange={(e) => setNewNote({ ...newNote, simpleExplanation: e.target.value })}
+                className="min-h-[90px]"
+              />
+            </div>
+
+            {/* Analogies */}
+            <div>
+              <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                Étape 2 : Analogies (optionnel)
+              </label>
+              {newNote.analogies.map((a, i) => (
+                <div key={i} className="mb-2">
+                  <Input placeholder={`Analogie ${i + 1}...`} value={a} onChange={(e) => updateAnalogy(i, e.target.value)} />
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addAnalogy} className="w-full">
+                <Plus className="w-4 h-4 mr-2" /> Ajouter une analogie
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { count: notes.length, label: 'Notes Feynman',     Icon: Lightbulb, color: 'text-rose-400',    bg: 'bg-rose-500/20' },
-          { count: notes.reduce((a, n) => a + n.analogies.length, 0), label: 'Analogies', Icon: Sparkles, color: 'text-amber-400', bg: 'bg-amber-500/20' },
-          { count: notes.length > 0 ? Math.round(notes.reduce((a, n) => a + n.masteryLevel, 0) / notes.length) : 0, label: '% Maîtrise moy.',  Icon: Star,     color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
-          { count: new Set(notes.map((n) => n.discipline)).size, label: 'Disciplines',    Icon: BookOpen, color: 'text-blue-400',    bg: 'bg-blue-500/20' },
-        ].map(({ count, label, Icon, color, bg }) => (
-          <Card key={label} className="glass border-0">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center', bg)}>
-                <Icon className={cn('w-5 h-5', color)} />
+            {/* Gaps */}
+            <div>
+              <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
+                <Search className="w-4 h-4 text-rose-400" />
+                Étape 3 : Lacunes (optionnel)
+              </label>
+              {newNote.gaps.map((g, i) => (
+                <div key={i} className="mb-2">
+                  <Input placeholder={`Lacune ${i + 1}...`} value={g} onChange={(e) => updateGap(i, e.target.value)} />
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addGap} className="w-full">
+                <Plus className="w-4 h-4 mr-2" /> Ajouter une lacune
+              </Button>
+            </div>
+
+            {/* Refined explanation */}
+            <div>
+              <label className="text-sm font-medium mb-2 flex items-center gap-2 text-[var(--color-foreground)]">
+                <BookOpen className="w-4 h-4 text-emerald-400" />
+                Étape 4 : Explication raffinée (optionnel)
+              </label>
+              <Textarea
+                placeholder="Après avoir comblé les lacunes, réécris..."
+                value={newNote.refinedExplanation}
+                onChange={(e) => setNewNote({ ...newNote, refinedExplanation: e.target.value })}
+                className="min-h-[70px]"
+              />
+            </div>
+
+            {/* Mastery slider */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Niveau de maîtrise estimé</label>
+              <input
+                type="range" min="0" max="100"
+                value={newNote.masteryLevel}
+                onChange={(e) => setNewNote({ ...newNote, masteryLevel: parseInt(e.target.value) })}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-[var(--color-muted-foreground)] mt-1">
+                <span>Débutant</span>
+                <span className={getMasteryColor(newNote.masteryLevel)}>{newNote.masteryLevel}%</span>
+                <span>Expert</span>
               </div>
-              <div>
-                <p className="text-xl font-bold text-[var(--color-foreground)]">
-                  {typeof count === 'number' && label.includes('%') ? `${count}%` : count}
-                </p>
-                <p className="text-[11px] text-[var(--color-muted-foreground)]">{label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </div>
 
-      {/* Filters */}
-      <div className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted-foreground)]" />
-          <Input
-            placeholder="Rechercher un concept..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <DisciplineChips
-          disciplines={disciplines}
-          selected={selectedDiscipline}
-          onSelect={setSelectedDiscipline}
-          counts={counts}
-        />
-        {selectedDiscipline !== 'all' && bySlug[selectedDiscipline] && (
-          <button
-            onClick={() => { haptic.light(); openDiscipline(selectedDiscipline) }}
-            className="w-full flex items-center justify-between min-h-[44px] px-4 rounded-xl glass border-0 active:scale-[0.98] transition-transform"
-          >
-            <span className="text-[13px] font-semibold text-[var(--color-foreground)]">
-              Ouvrir la formation · {bySlug[selectedDiscipline].name}
-            </span>
-            <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)]" />
-          </button>
-        )}
-      </div>
-
-      {/* Notes list */}
-      <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <Card className="glass border-0">
-            <CardContent className="p-10 text-center">
-              <Lightbulb className="w-14 h-14 mx-auto mb-3 opacity-25" />
-              <h3 className="text-base font-medium text-[var(--color-foreground)] mb-2">
-                {notes.length === 0 ? 'Commence ta collection Feynman' : 'Aucun résultat'}
-              </h3>
-              {notes.length === 0 && (
-                <Button onClick={() => setIsDialogOpen(true)} className="gap-2 mt-2">
-                  <Plus className="w-4 h-4" />
-                  Créer ma première note
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <AnimatePresence>
-            {filtered.map((note) => {
-              const config = bySlug[note.discipline] ?? { color: '#3B82F6', icon: 'BookOpen' }
-              const Icon = resolveIcon(config.icon)
-              const isExpanded = expandedNote === note.id
-              return (
-                <motion.div
-                  key={note.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-                >
-                  <Card className="glass border-0 card-hover overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{ background: `linear-gradient(135deg, ${config.color}30, ${config.color}10)` }}
-                        >
-                          <Icon className="w-5 h-5" style={{ color: config.color }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-[var(--color-foreground)]">{note.concept}</h3>
-                              <Badge variant="secondary" className={getMasteryColor(note.masteryLevel)}>
-                                {note.masteryLevel}% maîtrisé
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] text-[var(--color-muted-foreground)] flex-shrink-0">
-                                {format(note.createdAt, 'dd MMM', { locale: fr })}
-                              </span>
-                              <button
-                                onClick={() => { haptic.light(); setActiveNote(note) }}
-                                className="w-9 h-9 -mr-1 rounded-full flex items-center justify-center text-[var(--color-muted-foreground)] active:scale-95 transition-transform"
-                                aria-label="Actions"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="mt-2 p-3 rounded-lg bg-[var(--color-secondary)]/50">
-                            <p className="text-xs text-[var(--color-muted-foreground)] mb-1">Explication simple:</p>
-                            <p className="text-sm text-[var(--color-foreground)]">{note.simpleExplanation}</p>
-                          </div>
-
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-                                className="overflow-hidden"
-                              >
-                                {note.analogies.length > 0 && (
-                                  <div className="mt-3">
-                                    <p className="text-xs text-[var(--color-muted-foreground)] mb-1">Analogies:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                      {note.analogies.map((a, i) => (
-                                        <span key={i} className="text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-400">{a}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {note.gaps.length > 0 && (
-                                  <div className="mt-3">
-                                    <p className="text-xs text-[var(--color-muted-foreground)] mb-1">Lacunes:</p>
-                                    <ul className="space-y-1">
-                                      {note.gaps.map((g, i) => (
-                                        <li key={i} className="text-sm text-rose-400 flex items-center gap-2">
-                                          <span className="w-1 h-1 rounded-full bg-rose-400" />{g}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-                                {note.refinedExplanation && (
-                                  <div className="mt-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                    <p className="text-xs text-[var(--color-muted-foreground)] mb-1">Explication raffinée:</p>
-                                    <p className="text-sm text-[var(--color-foreground)]">{note.refinedExplanation}</p>
-                                  </div>
-                                )}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setExpandedNote(isExpanded ? null : note.id)}
-                            className="mt-2"
-                          >
-                            {isExpanded
-                              ? <><ChevronUp className="w-4 h-4 mr-1" />Voir moins</>
-                              : <><ChevronDown className="w-4 h-4 mr-1" />Voir plus</>}
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
-        )}
-      </div>
+            <Button
+              onClick={handleSubmit}
+              className="w-full gap-2"
+              disabled={!newNote.discipline || !newNote.concept || !newNote.simpleExplanation}
+            >
+              <Lightbulb className="w-4 h-4" />
+              Enregistrer la note
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Inline discipline creation — selects the new discipline on the note form */}
       <NewDisciplineDialog
@@ -471,7 +367,7 @@ export default function FeynmanNotes() {
         onCreated={(slug) => setNewNote((prev) => ({ ...prev, discipline: slug }))}
       />
 
-      {/* Per-note contextual actions */}
+      {/* Per-note detail/actions */}
       <NoteActionSheet
         open={!!activeNote}
         onClose={() => setActiveNote(null)}
