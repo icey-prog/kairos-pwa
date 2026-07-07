@@ -1,4 +1,4 @@
-import { BookOpen, Layers, Lightbulb, Zap, Target, Bug } from 'lucide-react'
+import { BookOpen, Layers, Lightbulb, Zap, Target, Bug, Circle, CircleDashed, CircleCheck } from 'lucide-react'
 
 // Knowledge taxonomy mirrors the backend SpacedCard / FeynmanNote fields:
 //   level              : beginner | intermediate | expert        (difficulty)
@@ -24,6 +24,22 @@ export const CATEGORIES = {
 
 export const levelMeta = (level) => LEVELS[level] ?? null
 export const categoryMeta = (cat) => CATEGORIES[cat] ?? null
+
+// Statut de révision d'une note Feynman : not_reviewed | to_review | reviewed.
+// Cycle en tapant le badge : not_reviewed → to_review → reviewed → not_reviewed.
+export const REVIEW_STATUSES = {
+  not_reviewed: { label: 'Pas encore révisé', Icon: CircleDashed, color: '#9CA3AF' },
+  to_review:    { label: 'À réviser',         Icon: Circle,       color: '#F59E0B' },
+  reviewed:     { label: 'Révisé',            Icon: CircleCheck,  color: '#22C55E' },
+}
+
+export const reviewStatusMeta = (status) => REVIEW_STATUSES[status] ?? REVIEW_STATUSES.not_reviewed
+
+export const nextReviewStatus = (status) => {
+  const order = ['not_reviewed', 'to_review', 'reviewed']
+  const i = order.indexOf(status)
+  return order[(i + 1) % order.length] || 'to_review'
+}
 
 // Ordered lists for filter UIs.
 export const LEVEL_FILTERS = [

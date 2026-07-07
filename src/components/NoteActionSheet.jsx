@@ -8,6 +8,7 @@ import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
 import { cn } from '../lib/utils'
+import { reviewStatusMeta, nextReviewStatus } from '../lib/knowledge'
 
 const masteryColor = (lvl) =>
   lvl >= 80 ? 'text-emerald-400' : lvl >= 60 ? 'text-blue-400' : lvl >= 40 ? 'text-amber-400' : 'text-rose-400'
@@ -18,11 +19,13 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
   const [form, setForm] = useState(null)
   const [converted, setConverted] = useState({})   // gap index → true once a card is created
   const [saving, setSaving] = useState(false)
+  const [reviewStatus, setReviewStatus] = useState('not_reviewed')
 
   useEffect(() => {
     if (note) {
       setMode('detail')
       setConverted({})
+      setReviewStatus(note.review_status || 'not_reviewed')
       setForm({
         concept: note.concept,
         simpleExplanation: note.simpleExplanation || '',
@@ -95,6 +98,25 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
     }
   }
 
+  const cycleReviewStatus = async () => {
+    const next = nextReviewStatus(reviewStatus)
+    setReviewStatus(next)
+    haptic.light()
+    try {
+      const res = await apiFetch(`${API}/feynman/${note.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review_status: next }),
+      })
+      if (!res.ok) throw new Error(`review status update failed: ${res.status}`)
+      mutate(`${API}/feynman`)
+    } catch (err) {
+      console.error('[NoteActionSheet.cycleReviewStatus]', err)
+      setReviewStatus(note.review_status || 'not_reviewed')
+      haptic.error()
+    }
+  }
+
   const remove = async () => {
     if (!confirm('Supprimer cette note ?')) return
     try {
@@ -133,7 +155,10 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
           </div>
 
           {/* Knowledge taxonomy badges */}
-          <KnowledgeBadges item={note} />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <KnowledgeBadges item={note} />
+            <ReviewStatusBadge status={reviewStatus} onClick={cycleReviewStatus} />
+          </div>
 
           <h3 className="text-[18px] font-bold text-[var(--color-foreground)] leading-tight">{note.concept}</h3>
 
@@ -302,6 +327,21 @@ function BackBtn({ onClick }) {
       className="flex items-center gap-1 text-[13px] font-medium text-[var(--color-muted-foreground)] active:scale-95 transition-transform -ml-1"
     >
       <ChevronLeft className="w-4 h-4" /> Retour
+    </button>
+  )
+}
+
+// Tap to cycle: not_reviewed → to_review → reviewed → not_reviewed.
+function ReviewStatusBadge({ status, onClick }) {
+  const meta = reviewStatusMeta(status)
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full active:scale-95 transition-transform"
+      style={{ background: `${meta.color}20`, color: meta.color }}
+    >
+      <meta.Icon className="w-3 h-3" />
+      {meta.label}
     </button>
   )
 }
