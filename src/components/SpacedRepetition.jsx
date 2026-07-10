@@ -17,6 +17,7 @@ import { API, fetcher, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
 import { useDisciplines } from '../hooks/useDisciplines'
 import { REVIEW_STATUSES } from '../lib/knowledge'
+import CodeText from './CodeText'
 import { resolveIcon } from '../lib/disciplineIcons'
 import NewDisciplineDialog from './NewDisciplineDialog'
 import CardActionSheet from './CardActionSheet'
@@ -283,7 +284,7 @@ export default function SpacedRepetition() {
               <span className="text-sm text-[var(--color-muted-foreground)]">{config.name}</span>
             </div>
             <div className="text-center py-6">
-              <h3 className="text-xl font-semibold text-[var(--color-foreground)] mb-4">{currentItem.front}</h3>
+              <CodeText text={currentItem.front} className="text-xl font-semibold text-[var(--color-foreground)] mb-4" />
               {!showAnswer ? (
                 <Button onClick={() => setShowAnswer(true)} size="lg" className="gap-2">
                   <Brain className="w-5 h-5" />
@@ -299,9 +300,7 @@ export default function SpacedRepetition() {
                   {/* Answer block — rendered before notation buttons */}
                   <div className="rounded-xl bg-[var(--color-secondary)] border border-[var(--color-border)] p-4 text-left">
                     {currentItem.back ? (
-                      <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">
-                        {currentItem.back}
-                      </p>
+                      <CodeText text={currentItem.back} className="text-[15px] text-[var(--color-foreground)]" />
                     ) : (
                       <p className="text-sm text-[var(--color-muted-foreground)] italic">
                         Aucune réponse enregistrée pour cette carte.

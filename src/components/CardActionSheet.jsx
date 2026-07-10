@@ -9,6 +9,7 @@ import {
 import { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
+import CodeText from './CodeText'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -107,7 +108,7 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
           {/* Question — always visible */}
           <div className="rounded-2xl border border-[var(--color-border)] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Question</p>
-            <p className="text-[16px] font-semibold text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.front}</p>
+            <CodeText text={card.front} className="text-[16px] font-semibold text-[var(--color-foreground)]" />
           </div>
 
           {/* Answer — hidden until reveal (try to recall first) */}
@@ -125,7 +126,7 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
               <div className="rounded-2xl bg-[var(--color-secondary)] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] mb-1.5">Réponse</p>
                 {card.back ? (
-                  <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{card.back}</p>
+                  <CodeText text={card.back} className="text-[15px] text-[var(--color-foreground)]" />
                 ) : (
                   <p className="text-sm text-[var(--color-muted-foreground)] italic">Aucune réponse — édite la carte pour la compléter.</p>
                 )}
@@ -255,7 +256,7 @@ function BugRow({ label, value }) {
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-500/80">{label}</p>
-      <p className="text-[14px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed mt-0.5">{value}</p>
+      <CodeText text={value} className="text-[14px] text-[var(--color-foreground)] mt-0.5" />
     </div>
   )
 }
