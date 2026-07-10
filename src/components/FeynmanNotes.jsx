@@ -126,10 +126,15 @@ export default function FeynmanNotes() {
     [rawNotes], // eslint-disable-line react-hooks/exhaustive-deps -- notes is derived 1:1 from rawNotes
   )
 
-  // Notes of the open discipline (level-2) + in-view fuzzy search.
+  // Notes of the open discipline (level-2) + in-view fuzzy search,
+  // sorted by review status: à réviser → pas encore révisé → révisé.
+  const STATUS_SORT = { to_review: 0, not_reviewed: 1, reviewed: 2 }
   const q = search.trim()
   const disciplineNotes = hubSlug
-    ? (q ? fuse.search(q).map((r) => r.item) : notes).filter((n) => n.discipline === hubSlug)
+    ? (q ? fuse.search(q).map((r) => r.item) : notes)
+        .filter((n) => n.discipline === hubSlug)
+        .sort((a, b) =>
+          (STATUS_SORT[a.review_status] ?? 1) - (STATUS_SORT[b.review_status] ?? 1))
     : []
 
   // Existing notes close to the concept being typed in the create dialog.

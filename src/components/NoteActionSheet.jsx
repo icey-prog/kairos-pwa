@@ -4,6 +4,7 @@ import { Pencil, Repeat, Trash2, ChevronLeft, Plus, Check, Sparkles, Search, Boo
 import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tip } from '../lib/ui'
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
+import CodeText from './CodeText'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -165,7 +166,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
           {/* Step 1 — simple explanation */}
           {note.simpleExplanation && (
             <Step Icon={Edit3} color="#3b82f6" label="Explication simple">
-              <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{note.simpleExplanation}</p>
+              <CodeText text={note.simpleExplanation} className="text-[15px] text-[var(--color-foreground)]" />
             </Step>
           )}
 
@@ -196,7 +197,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
           {/* Step 4 — refined */}
           {note.refinedExplanation && (
             <Step Icon={BookOpen} color="#10b981" label="Explication raffinée">
-              <p className="text-[15px] text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">{note.refinedExplanation}</p>
+              <CodeText text={note.refinedExplanation} className="text-[15px] text-[var(--color-foreground)]" />
             </Step>
           )}
 
