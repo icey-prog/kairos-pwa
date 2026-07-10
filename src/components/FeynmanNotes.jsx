@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Fuse from 'fuse.js'
 import {
-  Lightbulb, Plus, Search, BookOpen, Edit3, Sparkles, ChevronRight, ChevronLeft,
+  Lightbulb, Plus, Search, BookOpen, Edit3, Sparkles, ChevronRight, ChevronLeft, Timer,
 } from 'lucide-react'
 import useSWR, { mutate } from 'swr'
 import {
@@ -23,6 +23,7 @@ import KnowledgeSections from './KnowledgeSections'
 import DisciplineGlyph from './DisciplineGlyph'
 import { haptic } from '../lib/haptic'
 import { REVIEW_STATUSES } from '../lib/knowledge'
+import useStore from '../store/useStore'
 
 const ADD_DISCIPLINE = '__add__'
 
@@ -52,6 +53,33 @@ export default function FeynmanNotes() {
   const [newDisciplineOpen, setNewDisciplineOpen] = useState(false)
   const [activeNote, setActiveNote] = useState(null)
   const [newNote, setNewNote] = useState(EMPTY_NOTE)
+  const setActiveTask = useStore((s) => s.setActiveTask)
+  const setActiveTab = useStore((s) => s.setActiveTab)
+
+  // "Session d'étude" quest: create a real task for the discipline and hand it to the Timer.
+  const startStudySession = async () => {
+    const discName = bySlug[hubSlug]?.name ?? hubSlug
+    try {
+      const res = await apiFetch(`${API}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Étude — ${discName}`,
+          target_minutes: 25,
+          category: 'etude',
+          scheduled_date: new Date().toISOString().slice(0, 10),
+        }),
+      })
+      if (!res.ok) throw new Error(`create study task failed: ${res.status}`)
+      const task = await res.json()
+      mutate(`${API}/tasks`)
+      haptic.light()
+      setActiveTask(task)
+      setActiveTab('timer')
+    } catch (err) {
+      console.error('[startStudySession]', err)
+    }
+  }
 
   const notes = (rawNotes || []).map((n) => {
     let analogies = []
@@ -226,6 +254,10 @@ export default function FeynmanNotes() {
               </p>
             </div>
           </div>
+
+          <Button onClick={startStudySession} className="w-full gap-2">
+            <Timer className="w-4 h-4" /> Session d'étude (25 min)
+          </Button>
 
           {/* In-discipline search */}
           <div className="relative">
