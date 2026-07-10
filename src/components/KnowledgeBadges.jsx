@@ -1,4 +1,5 @@
 import { levelMeta, categoryMeta, reviewStatusMeta } from '../lib/knowledge'
+import { Tip } from '../lib/ui'
 
 // Renders level + knowledge_category badges for a card or note.
 // Legacy items (both null) render nothing. `compact` shows tiny dots for list rows.
@@ -11,9 +12,21 @@ export default function KnowledgeBadges({ item, compact = false }) {
   if (compact) {
     return (
       <span className="inline-flex items-center gap-1 flex-shrink-0">
-        {lvl && <span className="w-2 h-2 rounded-full" style={{ background: lvl.color }} title={lvl.label} />}
-        {cat && <cat.Icon className="w-3.5 h-3.5" style={{ color: cat.color }} />}
-        {review && <review.Icon className="w-3.5 h-3.5" style={{ color: review.color }} title={review.label} />}
+        {lvl && (
+          <Tip content={`Niveau : ${lvl.label}`}>
+            <span className="w-2 h-2 rounded-full" style={{ background: lvl.color }} />
+          </Tip>
+        )}
+        {cat && (
+          <Tip content={cat.label}>
+            <cat.Icon className="w-3.5 h-3.5" style={{ color: cat.color }} />
+          </Tip>
+        )}
+        {review && (
+          <Tip content={review.label}>
+            <review.Icon className="w-3.5 h-3.5" style={{ color: review.color }} />
+          </Tip>
+        )}
       </span>
     )
   }

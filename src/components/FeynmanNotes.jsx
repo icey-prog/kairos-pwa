@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import Fuse from 'fuse.js'
 import {
   Lightbulb, Plus, Search, BookOpen, Edit3, Sparkles, ChevronRight, ChevronLeft,
 } from 'lucide-react'
@@ -79,12 +80,26 @@ export default function FeynmanNotes() {
     s.sub = `${Math.round(s._sum / s.total)}% maîtrise moy.`
   }
 
-  // Notes of the open discipline (level-2) + in-view search.
-  const q = search.trim().toLowerCase()
+  // Fuzzy index over every note — tolerates typos ("revison" → "révision").
+  const fuse = useMemo(
+    () => new Fuse(notes, {
+      keys: ['concept', 'simpleExplanation'],
+      threshold: 0.35,
+      ignoreLocation: true,
+    }),
+    [rawNotes], // eslint-disable-line react-hooks/exhaustive-deps -- notes is derived 1:1 from rawNotes
+  )
+
+  // Notes of the open discipline (level-2) + in-view fuzzy search.
+  const q = search.trim()
   const disciplineNotes = hubSlug
-    ? notes.filter((n) =>
-        n.discipline === hubSlug &&
-        (!q || `${n.concept} ${n.simpleExplanation || ''}`.toLowerCase().includes(q)))
+    ? (q ? fuse.search(q).map((r) => r.item) : notes).filter((n) => n.discipline === hubSlug)
+    : []
+
+  // Existing notes close to the concept being typed in the create dialog.
+  const conceptQ = newNote.concept.trim()
+  const similarNotes = isDialogOpen && conceptQ.length >= 3
+    ? fuse.search(conceptQ).slice(0, 3).map((r) => r.item)
     : []
 
   const handleSubmit = async () => {
@@ -270,6 +285,27 @@ export default function FeynmanNotes() {
                 value={newNote.concept}
                 onChange={(e) => setNewNote({ ...newNote, concept: e.target.value })}
               />
+              {similarNotes.length > 0 && (
+                <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                  <p className="text-[11px] font-semibold text-amber-500 mb-1">Déjà abordé — tape pour ouvrir :</p>
+                  {similarNotes.map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => { haptic.light(); setIsDialogOpen(false); setActiveNote(n) }}
+                      className="w-full flex items-center justify-between gap-2 py-1.5 text-left active:opacity-70"
+                    >
+                      <span className="text-[13px] text-[var(--color-foreground)] truncate">
+                        {n.concept}
+                        <span className="text-[var(--color-muted-foreground)]"> · {bySlug[n.discipline]?.name ?? n.discipline}</span>
+                      </span>
+                      <span className={cn('text-[12px] font-semibold flex-shrink-0', getMasteryColor(n.masteryLevel))}>
+                        {n.masteryLevel}%
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Step 1 */}

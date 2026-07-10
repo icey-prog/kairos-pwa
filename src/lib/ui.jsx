@@ -1,6 +1,37 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import tippy from 'tippy.js'
+import 'tippy.js/dist/tippy.css'
 import { cn } from './utils'
+
+// ─── Tip (tooltip tippy.js) ──────────────────────────────────────────────────
+// Wraps children in an inline span carrying the tippy instance.
+// On touch devices the tooltip opens on long-press (400ms) so it never
+// swallows the tap of interactive children (e.g. the review-status badge).
+
+export function Tip({ content, placement = 'top', interactive = false, className, children }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!ref.current || !content) return
+    const instance = tippy(ref.current, {
+      content,
+      placement,
+      interactive,
+      theme: 'mile',
+      touch: ['hold', 400],
+      delay: [150, 0],
+    })
+    return () => instance.destroy()
+  }, [content, placement, interactive])
+
+  if (!content) return children
+  return (
+    <span ref={ref} className={cn('inline-flex', className)}>
+      {children}
+    </span>
+  )
+}
 
 // ─── Card ────────────────────────────────────────────────────────────────────
 

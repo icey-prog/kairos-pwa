@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import Fuse from 'fuse.js'
 import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle,
   TrendingUp, Search, RotateCcw, ChevronRight, ChevronLeft,
@@ -94,12 +95,16 @@ export default function SpacedRepetition() {
     s.dueBadge = s.due
   }
 
-  // Items of the open discipline (level-2), with optional in-view search.
-  const q = search.trim().toLowerCase()
+  // Fuzzy index over every card — tolerates typos, same setup as FeynmanNotes.
+  const fuse = useMemo(
+    () => new Fuse(items, { keys: ['front', 'back'], threshold: 0.35, ignoreLocation: true }),
+    [rawItems], // eslint-disable-line react-hooks/exhaustive-deps -- items is derived 1:1 from rawItems
+  )
+
+  // Items of the open discipline (level-2), with optional in-view fuzzy search.
+  const q = search.trim()
   const disciplineItems = hubSlug
-    ? items.filter((it) =>
-        it.discipline === hubSlug &&
-        (!q || `${it.front} ${it.back || ''}`.toLowerCase().includes(q)))
+    ? (q ? fuse.search(q).map((r) => r.item) : items).filter((it) => it.discipline === hubSlug)
     : []
   const disciplineDue = hubSlug ? items.filter((it) => it.discipline === hubSlug && isDue(it)) : []
 

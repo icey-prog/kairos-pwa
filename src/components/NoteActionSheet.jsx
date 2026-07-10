@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { mutate } from 'swr'
 import { Pencil, Repeat, Trash2, ChevronLeft, Plus, Check, Sparkles, Search, BookOpen, Edit3 } from 'lucide-react'
-import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
+import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tip } from '../lib/ui'
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
 import { API, apiFetch } from '../lib/api'
@@ -334,15 +334,18 @@ function BackBtn({ onClick }) {
 // Tap to cycle: not_reviewed → to_review → reviewed → not_reviewed.
 function ReviewStatusBadge({ status, onClick }) {
   const meta = reviewStatusMeta(status)
+  const next = reviewStatusMeta(nextReviewStatus(status))
   return (
-    <button
-      onClick={onClick}
-      className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full active:scale-95 transition-transform"
-      style={{ background: `${meta.color}20`, color: meta.color }}
-    >
-      <meta.Icon className="w-3 h-3" />
-      {meta.label}
-    </button>
+    <Tip content={`Taper pour passer à : ${next.label}`}>
+      <button
+        onClick={onClick}
+        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full active:scale-95 transition-transform"
+        style={{ background: `${meta.color}20`, color: meta.color }}
+      >
+        <meta.Icon className="w-3 h-3" />
+        {meta.label}
+      </button>
+    </Tip>
   )
 }
 
