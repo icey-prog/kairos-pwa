@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import Fuse from 'fuse.js'
 import {
@@ -16,6 +16,7 @@ import { cn } from '../lib/utils'
 import { API, fetcher, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
 import { useDisciplines } from '../hooks/useDisciplines'
+import { REVIEW_STATUSES } from '../lib/knowledge'
 import { resolveIcon } from '../lib/disciplineIcons'
 import NewDisciplineDialog from './NewDisciplineDialog'
 import CardActionSheet from './CardActionSheet'
@@ -75,6 +76,7 @@ export default function SpacedRepetition() {
   const [search, setSearch] = useState('')
   const [newDisciplineOpen, setNewDisciplineOpen] = useState(false)
   const [activeCard, setActiveCard] = useState(null)   // card whose detail sheet is open
+  const sessionStartRef = useRef(null)                  // wall-clock start of the review session (quest logging)
 
   const today = new Date()
   const items = (rawItems || []).map(i => ({ ...i, next_review_date: parseISO(i.next_review_date) }))
@@ -83,16 +85,24 @@ export default function SpacedRepetition() {
   const dueToday = items.filter(isDue)
 
   // Per-discipline stats for the hub cards.
+  // Card status mapping: due → to_review, never reviewed (repetition 0) → not_reviewed, else reviewed.
   const hubStats = {}
   for (const it of items) {
-    const s = (hubStats[it.discipline] ||= { total: 0, due: 0 })
+    const s = (hubStats[it.discipline] ||= { total: 0, due: 0, _byStatus: { not_reviewed: 0, to_review: 0, reviewed: 0 } })
     s.total += 1
-    if (isDue(it)) s.due += 1
+    if (isDue(it)) { s.due += 1; s._byStatus.to_review += 1 }
+    else if (it.repetition === 0) s._byStatus.not_reviewed += 1
+    else s._byStatus.reviewed += 1
   }
   for (const slug in hubStats) {
     const s = hubStats[slug]
     s.sub = s.due > 0 ? `${s.due} à réviser` : 'à jour'
     s.dueBadge = s.due
+    const dominant = Object.entries(s._byStatus).sort((a, b) => b[1] - a[1])[0][0]
+    s.statusColor = REVIEW_STATUSES[dominant].color
+    s.statusLabel = REVIEW_STATUSES[dominant].label
+    // Revision-time priority: most due first, then fully-reviewed decks, untouched last.
+    s.order = s.due > 0 ? -s.due : s._byStatus.reviewed === s.total ? 400 : 500
   }
 
   // Fuzzy index over every card — tolerates typos, same setup as FeynmanNotes.
@@ -140,12 +150,44 @@ export default function SpacedRepetition() {
   // Freeze the queue at session start so background mutate() can't drop or reorder cards mid-review.
   const startReviewWith = (cards) => {
     if (!cards.length) return
+    sessionStartRef.current = Date.now()
     setReviewQueue([...cards])
     setIsReviewMode(true)
     setCurrentReviewIndex(0)
     setShowAnswer(false)
   }
   const startReview = () => startReviewWith(dueToday)
+
+  // Log the finished session as a completed quest in the task system (Planner/Timer).
+  // Real elapsed minutes: task created with target = spent = elapsed → derived-completed.
+  const logReviewQuest = async (cardCount) => {
+    const minutes = Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 60000))
+    const discName = bySlug[hubSlug]?.name ?? 'toutes disciplines'
+    try {
+      const res = await apiFetch(`${API}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Quête révision — ${discName} (${cardCount} cartes)`,
+          target_minutes: minutes,
+          category: 'revision',
+          scheduled_date: new Date().toISOString().slice(0, 10),
+        }),
+      })
+      if (!res.ok) throw new Error(`create quest failed: ${res.status}`)
+      const task = await res.json()
+      const patch = await apiFetch(`${API}/tasks/${task.id}/add_time`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes }),
+      })
+      if (!patch.ok) throw new Error(`quest add_time failed: ${patch.status}`)
+      mutate(`${API}/tasks`)
+      mutate(`${API}/tasks/completed`)
+    } catch (err) {
+      console.error('[logReviewQuest]', err)
+    }
+  }
 
   // Award XP once a full session is completed (+5/card, capped at +50).
   const awardSessionXp = async (cardCount) => {
@@ -189,6 +231,7 @@ export default function SpacedRepetition() {
         setShowAnswer(false)
       } else {
         await awardSessionXp(reviewQueue.length)
+        await logReviewQuest(reviewQueue.length)
         setIsReviewMode(false)
         setCurrentReviewIndex(0)
         setShowAnswer(false)

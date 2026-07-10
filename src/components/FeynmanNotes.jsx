@@ -22,6 +22,7 @@ import DisciplineHub from './DisciplineHub'
 import KnowledgeSections from './KnowledgeSections'
 import DisciplineGlyph from './DisciplineGlyph'
 import { haptic } from '../lib/haptic'
+import { REVIEW_STATUSES } from '../lib/knowledge'
 
 const ADD_DISCIPLINE = '__add__'
 
@@ -71,13 +72,20 @@ export default function FeynmanNotes() {
   // Per-discipline stats for the hub cards.
   const hubStats = {}
   for (const n of notes) {
-    const s = (hubStats[n.discipline] ||= { total: 0, _sum: 0 })
+    const s = (hubStats[n.discipline] ||= { total: 0, _sum: 0, _byStatus: { not_reviewed: 0, to_review: 0, reviewed: 0 } })
     s.total += 1
     s._sum += n.masteryLevel || 0
+    s._byStatus[n.review_status in s._byStatus ? n.review_status : 'not_reviewed'] += 1
   }
   for (const slug in hubStats) {
     const s = hubStats[slug]
     s.sub = `${Math.round(s._sum / s.total)}% maîtrise moy.`
+    // Marker = dominant review status; order = started first, untouched next, finished last.
+    const dominant = Object.entries(s._byStatus).sort((a, b) => b[1] - a[1])[0][0]
+    s.statusColor = REVIEW_STATUSES[dominant].color
+    s.statusLabel = REVIEW_STATUSES[dominant].label
+    const touched = s._byStatus.to_review + s._byStatus.reviewed
+    s.order = touched === 0 ? 1 : s._byStatus.reviewed === s.total ? 2 : 0
   }
 
   // Fuzzy index over every note — tolerates typos ("revison" → "révision").

@@ -3,9 +3,13 @@ import { haptic } from '../lib/haptic'
 import DisciplineGlyph from './DisciplineGlyph'
 
 // Level-1 of the revision hub: a card per discipline that has items.
-// `stats[slug] = { total, sub }` — total = item count, sub = secondary line (e.g. "3 à réviser").
+// `stats[slug] = { total, sub, statusColor?, statusLabel?, order? }`
+//   statusColor/Label = dominant review status marker (right side of the card)
+//   order = sort key (lower first) — callers put started courses first, finished last
 export default function DisciplineHub({ disciplines, stats, onSelect, emptyLabel }) {
-  const withItems = disciplines.filter((d) => (stats[d.slug]?.total ?? 0) > 0)
+  const withItems = disciplines
+    .filter((d) => (stats[d.slug]?.total ?? 0) > 0)
+    .sort((a, b) => (stats[a.slug]?.order ?? 0) - (stats[b.slug]?.order ?? 0))
 
   if (withItems.length === 0) {
     return (
@@ -38,6 +42,13 @@ export default function DisciplineHub({ disciplines, stats, onSelect, emptyLabel
                 {s.sub ? ` · ${s.sub}` : ''}
               </p>
             </div>
+            {s.statusColor && (
+              <span
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: s.statusColor }}
+                title={s.statusLabel}
+              />
+            )}
             {s.dueBadge > 0 && (
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500 flex-shrink-0">
                 {s.dueBadge}
