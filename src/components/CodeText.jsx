@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { Copy, Check } from 'lucide-react'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 import typescript from 'highlight.js/lib/languages/typescript'
@@ -36,18 +37,31 @@ const highlight = (code, lang) => {
   return hljs.highlightAuto(code).value
 }
 
-// ray.so-style editor block: dark rounded card, traffic lights, language tag.
-function CodeBlock({ code, lang }) {
+// Editor-style block (VS Code / Flutter docs look): filename tab + copy button.
+function CodeBlock({ code, lang, filename }) {
   const html = useMemo(() => highlight(code, lang), [code, lang])
+  const [copied, setCopied] = useState(false)
+
+  const copy = () => {
+    navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   return (
     <div className="my-2 rounded-xl overflow-hidden bg-[#0d1117] border border-white/10">
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-        <span className="flex gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        <span className="text-[11px] font-medium text-white/50 font-mono truncate">
+          {filename || (lang ? lang.toUpperCase() : '')}
         </span>
-        {lang && <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{lang}</span>}
+        <button
+          type="button"
+          onClick={copy}
+          className="flex items-center gap-1 text-[10px] font-medium text-white/40 hover:text-white/70 transition-colors flex-shrink-0"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? 'Copié' : 'Copier'}
+        </button>
       </div>
       <pre className="p-3 overflow-x-auto text-[13px] leading-relaxed">
         <code className="hljs !bg-transparent !p-0" dangerouslySetInnerHTML={{ __html: html }} />
@@ -61,12 +75,13 @@ function CodeBlock({ code, lang }) {
 export default function CodeText({ text, className }) {
   const parts = useMemo(() => {
     const out = []
-    const re = /```(\w*)\n?([\s\S]*?)```/g
+    // ```lang or ```lang:filename.ext fences — the filename becomes the editor tab header.
+    const re = /```(\w*)(?::([^\n]+))?\n?([\s\S]*?)```/g
     let last = 0
     let m
     while ((m = re.exec(text)) !== null) {
       if (m.index > last) out.push({ type: 'text', value: text.slice(last, m.index) })
-      out.push({ type: 'code', lang: m[1] || null, value: m[2].replace(/\n$/, '') })
+      out.push({ type: 'code', lang: m[1] || null, filename: m[2] || null, value: m[3].replace(/\n$/, '') })
       last = m.index + m[0].length
     }
     if (last < text.length) out.push({ type: 'text', value: text.slice(last) })
@@ -90,7 +105,7 @@ export default function CodeText({ text, className }) {
   return (
     <div className={className}>
       {parts.map((p, i) =>
-        p.type === 'code' ? <CodeBlock key={i} code={p.value} lang={p.lang} /> : renderProse(p.value, i),
+        p.type === 'code' ? <CodeBlock key={i} code={p.value} lang={p.lang} filename={p.filename} /> : renderProse(p.value, i),
       )}
     </div>
   )
