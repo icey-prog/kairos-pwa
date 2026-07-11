@@ -203,10 +203,11 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
           {/* Step 3 — gaps */}
           {realGaps.length > 0 && (
             <Step Icon={Search} color="#f43f5e" label="Lacunes">
-              <ul className="space-y-1.5">
+              <ul className="space-y-2.5">
                 {realGaps.map((g, i) => (
-                  <li key={i} className="text-[14px] text-[var(--color-foreground)] flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 flex-shrink-0" />{g}
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-2 flex-shrink-0" />
+                    <CodeText text={g} className="flex-1 min-w-0 text-[14px] text-[var(--color-foreground)]" />
                   </li>
                 ))}
               </ul>
