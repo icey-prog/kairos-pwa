@@ -11,6 +11,7 @@ import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
 import CodeText from './CodeText'
 import PersonalNotes from './PersonalNotes'
+import Illustration from './Illustration'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -25,6 +26,7 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
   const [logs, setLogs] = useState(null)
   const [saving, setSaving] = useState(false)
   const [revealed, setRevealed] = useState(false)   // answer hidden until user tries to recall
+  const [illustrationSvg, setIllustrationSvg] = useState(null)
 
   // Reset to detail + hydrate edit form + load history each time a card opens.
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
     setMode('detail')
     setRevealed(false)
     setForm({ front: card.front, back: card.back || '', discipline: card.discipline })
+    setIllustrationSvg(card.illustration_svg || null)
     setLogs(null)
     let cancelled = false
     apiFetch(`${API}/spaced-cards/${card.id}/review-logs`)
@@ -193,6 +196,12 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
               </ol>
             )}
           </div>
+
+          <Illustration
+            svg={illustrationSvg}
+            endpoint={() => apiFetch(`${API}/spaced-cards/${card.id}/illustrate`, { method: 'POST' })}
+            onGenerated={(updated) => { setIllustrationSvg(updated.illustration_svg); mutate(`${API}/spaced-cards`) }}
+          />
 
           <PersonalNotes value={card.personal_notes} onSave={savePersonalNotes} />
 

@@ -6,6 +6,7 @@ import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
 import CodeText from './CodeText'
 import PersonalNotes from './PersonalNotes'
+import Illustration from './Illustration'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -22,12 +23,14 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
   const [converted, setConverted] = useState({})   // gap index → true once a card is created
   const [saving, setSaving] = useState(false)
   const [reviewStatus, setReviewStatus] = useState('not_reviewed')
+  const [illustrationSvg, setIllustrationSvg] = useState(null)
 
   useEffect(() => {
     if (note) {
       setMode('detail')
       setConverted({})
       setReviewStatus(note.review_status || 'not_reviewed')
+      setIllustrationSvg(note.illustration_svg || null)
       setForm({
         concept: note.concept,
         simpleExplanation: note.simpleExplanation || '',
@@ -216,6 +219,12 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
               <CodeText text={note.refinedExplanation} className="text-[15px] text-[var(--color-foreground)]" />
             </Step>
           )}
+
+          <Illustration
+            svg={illustrationSvg}
+            endpoint={() => apiFetch(`${API}/feynman/${note.id}/illustrate`, { method: 'POST' })}
+            onGenerated={(updated) => { setIllustrationSvg(updated.illustration_svg); mutate(`${API}/feynman`) }}
+          />
 
           <PersonalNotes value={note.personal_notes} onSave={savePersonalNotes} />
 
