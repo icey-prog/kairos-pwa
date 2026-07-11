@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import Fuse from 'fuse.js'
 import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle,
-  TrendingUp, Search, RotateCcw, ChevronRight, ChevronLeft,
+  TrendingUp, Search, RotateCcw, ChevronRight, ChevronLeft, NotebookPen,
 } from 'lucide-react'
 import { differenceInDays, parseISO, isAfter, startOfDay } from 'date-fns'
 import useSWR, { mutate } from 'swr'
@@ -369,6 +369,9 @@ export default function SpacedRepetition() {
             <KnowledgeBadges item={item} compact />
           </div>
         </div>
+        {item.personal_notes?.trim() && (
+          <NotebookPen className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+        )}
         {due && <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />}
         <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)] flex-shrink-0" />
       </button>

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Fuse from 'fuse.js'
 import {
-  Lightbulb, Plus, Search, BookOpen, Edit3, Sparkles, ChevronRight, ChevronLeft, Timer,
+  Lightbulb, Plus, Search, BookOpen, Edit3, Sparkles, ChevronRight, ChevronLeft, Timer, NotebookPen,
 } from 'lucide-react'
 import useSWR, { mutate } from 'swr'
 import {
@@ -192,6 +192,9 @@ export default function FeynmanNotes() {
           <KnowledgeBadges item={note} compact />
         </div>
       </div>
+      {note.personal_notes?.trim() && (
+        <NotebookPen className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+      )}
       <ChevronRight className="w-4 h-4 text-[var(--color-muted-foreground)] flex-shrink-0" />
     </button>
   )

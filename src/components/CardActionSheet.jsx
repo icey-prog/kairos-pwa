@@ -10,6 +10,7 @@ import { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, Sel
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
 import CodeText from './CodeText'
+import PersonalNotes from './PersonalNotes'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -62,6 +63,21 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
       haptic.error()
     } finally {
       setSaving(false)
+    }
+  }
+
+  const savePersonalNotes = async (value) => {
+    try {
+      const res = await apiFetch(`${API}/spaced-cards/${card.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personal_notes: value }),
+      })
+      if (!res.ok) throw new Error(`personal_notes update failed: ${res.status}`)
+      mutate(`${API}/spaced-cards`)
+    } catch (err) {
+      console.error('[CardActionSheet.savePersonalNotes]', err)
+      haptic.error()
     }
   }
 
@@ -177,6 +193,8 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
               </ol>
             )}
           </div>
+
+          <PersonalNotes value={card.personal_notes} onSave={savePersonalNotes} />
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">

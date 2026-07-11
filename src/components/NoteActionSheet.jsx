@@ -5,6 +5,7 @@ import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigg
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
 import CodeText from './CodeText'
+import PersonalNotes from './PersonalNotes'
 import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
@@ -95,6 +96,21 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
       setConverted((prev) => ({ ...prev, [i]: true }))
     } catch (err) {
       console.error('[NoteActionSheet.convertGap]', err)
+      haptic.error()
+    }
+  }
+
+  const savePersonalNotes = async (value) => {
+    try {
+      const res = await apiFetch(`${API}/feynman/${note.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personal_notes: value }),
+      })
+      if (!res.ok) throw new Error(`personal_notes update failed: ${res.status}`)
+      mutate(`${API}/feynman`)
+    } catch (err) {
+      console.error('[NoteActionSheet.savePersonalNotes]', err)
       haptic.error()
     }
   }
@@ -200,6 +216,8 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
               <CodeText text={note.refinedExplanation} className="text-[15px] text-[var(--color-foreground)]" />
             </Step>
           )}
+
+          <PersonalNotes value={note.personal_notes} onSave={savePersonalNotes} />
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
