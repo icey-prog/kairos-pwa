@@ -5,6 +5,7 @@ import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigg
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
 import CodeText from './CodeText'
+import CodeWalkthrough from './CodeWalkthrough'
 import PersonalNotes from './PersonalNotes'
 import Illustration from './Illustration'
 import { API, apiFetch } from '../lib/api'
@@ -37,6 +38,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
         analogies: note.analogies?.length ? note.analogies : [''],
         gaps: note.gaps?.length ? note.gaps : [''],
         refinedExplanation: note.refinedExplanation || '',
+        illustrationSteps: note.illustration_steps || '',
         discipline: note.discipline,
         masteryLevel: note.masteryLevel ?? 0,
       })
@@ -49,6 +51,13 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
 
   const saveEdit = async () => {
     if (!form.concept.trim() || saving) return
+    if (form.illustrationSteps.trim()) {
+      try { JSON.parse(form.illustrationSteps) } catch {
+        haptic.error()
+        alert('Parcours de code : JSON invalide — vérifie la syntaxe avant d\'enregistrer.')
+        return
+      }
+    }
     setSaving(true)
     try {
       const res = await apiFetch(`${API}/feynman/${note.id}`, {
@@ -60,6 +69,7 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
           analogies: JSON.stringify(form.analogies.filter((a) => a.trim())),
           gaps: JSON.stringify(form.gaps.filter((g) => g.trim())),
           refined_explanation: form.refinedExplanation,
+          illustration_steps: form.illustrationSteps.trim() || null,
           mastery_level: form.masteryLevel,
           discipline: form.discipline,
         }),
@@ -158,6 +168,9 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
 
   const realGaps = (note.gaps || []).filter((g) => g.trim())
   const realAnalogies = (note.analogies || []).filter((a) => a.trim())
+  const walkthroughSteps = (() => {
+    try { return JSON.parse(note.illustration_steps || 'null') } catch { return null }
+  })()
   const title = mode === 'edit' ? 'Éditer la note' : mode === 'convert' ? 'Convertir en cartes' : 'Détail de la note'
 
   return (
@@ -227,6 +240,12 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
             onGenerated={(updated) => { setIllustrationSvg(updated.illustration_svg); mutate(`${API}/feynman`) }}
           />
 
+          {walkthroughSteps?.length > 0 && (
+            <Step Icon={Search} color="#8b5cf6" label="Parcours de code">
+              <CodeWalkthrough steps={walkthroughSteps} />
+            </Step>
+          )}
+
           <PersonalNotes value={note.personal_notes} onSave={savePersonalNotes} />
 
           {/* Actions */}
@@ -282,6 +301,15 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
           <div>
             <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Explication raffinée</label>
             <Textarea value={form.refinedExplanation} onChange={(e) => setForm({ ...form, refinedExplanation: e.target.value })} className="min-h-[70px]" />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Parcours de code (JSON, avancé)</label>
+            <Textarea
+              value={form.illustrationSteps}
+              onChange={(e) => setForm({ ...form, illustrationSteps: e.target.value })}
+              className="min-h-[90px] font-mono text-[12px]"
+              placeholder='[{"file":"...","code":"...","note":"..."}]'
+            />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block text-[var(--color-foreground)]">Discipline</label>
