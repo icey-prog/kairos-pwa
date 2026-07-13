@@ -16,8 +16,9 @@ import {
 } from 'lucide-react'
 import useStore from '../store/useStore'
 import { API, fetcher, apiFetch } from '../lib/api'
-import { isCompleted, getProgress } from '../lib/taskBridge'
+import { isCompleted, getProgress, adaptTask } from '../lib/taskBridge'
 import { haptic } from '../lib/haptic'
+import LongPress from './LongPress'
 
 const CATEGORY_COLORS = {
   dev:      { bg: 'bg-blue-500/10',   text: 'text-blue-600',   label: 'Dev',   accent: '#3b82f6' },
@@ -58,6 +59,7 @@ export default function Arena() {
 
   const currentMood = useStore((s) => s.currentMood)
   const setXpBalance = useStore((s) => s.setXpBalance)
+  const setActiveTask = useStore((s) => s.setActiveTask)
   const setActiveTab = useStore((s) => s.setActiveTab)
   const setMainTab = useStore((s) => s.setMainTab)
   const mainTab = useStore((s) => s.mainTab)
@@ -101,6 +103,7 @@ export default function Arena() {
         body: JSON.stringify({ amount: xpGain, reason: task.title.slice(0, 100) }),
       })
       haptic.success()
+      window.dispatchEvent(new CustomEvent('mile:trophy'))
       mutate(`${API}/tasks?date=${todayStr()}`)
       mutate(`${API}/xp/balance`)
     } catch (err) {
@@ -109,6 +112,19 @@ export default function Arena() {
     } finally {
       completing.current.delete(task.id)
     }
+  }
+
+  // Tap on a quest row = send it to the timer; completion only happens via
+  // the timer or an explicit long-press + confirm (no more free-XP tap).
+  const focusTask = (task) => {
+    haptic.light()
+    setActiveTask(adaptTask(task))
+    setMainTab('focus')
+    setActiveTab('timer')
+  }
+
+  const confirmComplete = (task) => {
+    if (confirm(`Marquer « ${task.title} » comme terminée ?`)) completeTask(task)
   }
 
   const redeemReward = async (reward) => {
@@ -246,9 +262,10 @@ export default function Arena() {
                     const cat = CATEGORY_COLORS[task.category]
                     const xpGain = Math.max(10, Math.round((task.target_minutes - task.spent_minutes) * 0.8))
                     return (
-                      <button
+                      <LongPress
                         key={task.id}
-                        onClick={() => completeTask(task)}
+                        onTap={() => focusTask(task)}
+                        onLongPress={() => confirmComplete(task)}
                         disabled={done}
                         className={`
                           w-full flex items-center gap-4 pl-[17px] pr-5 min-h-[68px] text-left
@@ -294,7 +311,7 @@ export default function Arena() {
                             <ChevronRight size={14} strokeWidth={2} className="text-[var(--color-border)]" />
                           </div>
                         )}
-                      </button>
+                      </LongPress>
                     )
                   })}
                 </div>

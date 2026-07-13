@@ -6,6 +6,9 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
 import FloatingNav from './components/FloatingNav'
+import NetworkBanner from './components/NetworkBanner'
+import TrophyCelebration from './components/TrophyCelebration'
+import { flush } from './lib/offlineQueue'
 import { API, apiFetch } from './lib/api'
 import { adaptTask } from './lib/taskBridge'
 
@@ -74,12 +77,17 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setMood])
 
+  // Drain the offline queue on every app start (connection may have returned while closed)
+  useEffect(() => { flush() }, [])
+
   return (
     <>
+      <NetworkBanner />
       <ErrorBoundary>
         {moodLogged ? <Arena /> : <MoodGate />}
       </ErrorBoundary>
       <FloatingNav />
+      <TrophyCelebration />
       <Toaster position="bottom-right" />
     </>
   )

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { mutate } from 'swr'
-import { Pencil, Repeat, Trash2, ChevronLeft, Plus, Check, Sparkles, Search, BookOpen, Edit3 } from 'lucide-react'
+import { Pencil, Repeat, Trash2, ChevronLeft, Plus, Check, Sparkles, Search, BookOpen, Edit3, Timer } from 'lucide-react'
 import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tip } from '../lib/ui'
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
@@ -13,6 +13,9 @@ import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
 import { cn } from '../lib/utils'
 import { reviewStatusMeta, nextReviewStatus } from '../lib/knowledge'
+import { createLinkedQuest } from '../lib/questLink'
+import { adaptTask } from '../lib/taskBridge'
+import useStore from '../store/useStore'
 
 const masteryColor = (lvl) =>
   lvl >= 80 ? 'text-emerald-400' : lvl >= 60 ? 'text-blue-400' : lvl >= 40 ? 'text-amber-400' : 'text-rose-400'
@@ -25,6 +28,25 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
   const [saving, setSaving] = useState(false)
   const [reviewStatus, setReviewStatus] = useState('not_reviewed')
   const [illustrationSvg, setIllustrationSvg] = useState(null)
+  const setActiveTask = useStore((s) => s.setActiveTask)
+  const setMainTab = useStore((s) => s.setMainTab)
+  const setActiveTab = useStore((s) => s.setActiveTab)
+
+  // Quête liée : crée la tâche (resources = note:ID) et bascule sur le chrono.
+  const startFocus = async () => {
+    try {
+      const task = await createLinkedQuest({ title: `Réviser — ${note.concept}`, type: 'note', id: note.id })
+      mutate(`${API}/tasks`)
+      haptic.light()
+      setActiveTask(adaptTask(task))
+      setMainTab('focus')
+      setActiveTab('timer')
+      onClose()
+    } catch (err) {
+      console.error('[NoteActionSheet.startFocus]', err)
+      haptic.error()
+    }
+  }
 
   useEffect(() => {
     if (note) {
@@ -250,7 +272,10 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            <Button onClick={() => { haptic.select(); setMode('edit') }} className="flex-1 gap-2">
+            <Button onClick={startFocus} className="flex-1 gap-2">
+              <Timer className="w-4 h-4" /> Focus 25 min
+            </Button>
+            <Button variant="outline" onClick={() => { haptic.select(); setMode('edit') }} className="gap-2">
               <Pencil className="w-4 h-4" /> Éditer
             </Button>
             <Button

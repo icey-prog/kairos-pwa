@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import useSWR, { mutate } from 'swr'
-import { Plus, Link, ExternalLink, X, Bell, Play, Calendar } from 'lucide-react'
+import { Plus, Link, ExternalLink, X, Bell, Play, Calendar, BookOpen } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import useStore from '../store/useStore'
 import { API, fetcher, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
+import { parseQuestLink, createLinkedQuest } from '../lib/questLink'
+import QuestPicker from './QuestPicker'
 
 const isUrl = (str) => str.startsWith('http://') || str.startsWith('https://')
 
@@ -73,6 +75,19 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
   const [showReminder, setShowReminder] = useState(false)
   const [reminderTime, setReminderTime] = useState('')
   const [clipboardUrl, setClipboardUrl] = useState(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  // Quête depuis une note/carte existante — pas de saisie manuelle.
+  const addLinkedQuest = async ({ type, id, title: itemTitle }) => {
+    try {
+      await createLinkedQuest({ title: `Réviser — ${itemTitle}`, type, id })
+      mutate(`${API}/tasks`)
+      haptic.success()
+    } catch (err) {
+      console.error('[addLinkedQuest]', err)
+      haptic.error()
+    }
+  }
 
   const setActiveTask = useStore((s) => s.setActiveTask)
   const setActiveTab = useStore((s) => s.setActiveTab)
@@ -351,8 +366,18 @@ export default function DailyPlanner({ embedded = false, defaultDate = null }) {
             <Plus size={14} strokeWidth={2.5} />
             Ajouter
           </button>
+
+          <button
+            onClick={() => setPickerOpen(true)}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-purple-500/10 text-purple-600 transition-all active:scale-[0.97] active:opacity-70"
+          >
+            <BookOpen size={14} strokeWidth={2.5} />
+            Depuis une note
+          </button>
         </div>
       </div>
+
+      <QuestPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={addLinkedQuest} />
 
       {/* Active tasks */}
       {tasks && tasks.length > 0 && (
@@ -415,7 +440,9 @@ const CATEGORY_LABEL = {
 
 function TaskRow({ task, divider, onFocus }) {
   const pct = Math.min(100, Math.round((task.spent_minutes / task.target_minutes) * 100))
+  const linked = parseQuestLink(task.resources)
   const resources = (() => {
+    if (linked) return []  // "note:91" n'est pas une liste d'URLs
     try { return JSON.parse(task.resources || '[]') } catch { return [] }
   })()
 
@@ -430,6 +457,12 @@ function TaskRow({ task, divider, onFocus }) {
               {task.title}
             </p>
             <div className="flex items-center gap-1.5 flex-shrink-0">
+              {linked && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600">
+                  <BookOpen size={10} strokeWidth={2.5} />
+                  {linked.type === 'note' ? 'note' : 'carte'}
+                </span>
+              )}
               {task.category && (
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${CATEGORY_BADGE[task.category] ?? 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'}`}>
                   {CATEGORY_LABEL[task.category] ?? task.category}

@@ -10,8 +10,9 @@ import useSWR, { mutate } from 'swr'
 import { Card, CardContent, Button } from '../lib/ui'
 import { cn } from '../lib/utils'
 import { API, fetcher, apiFetch } from '../lib/api'
-import { isCompleted, getProgress } from '../lib/taskBridge'
+import { isCompleted, getProgress, adaptTask } from '../lib/taskBridge'
 import useStore from '../store/useStore'
+import LongPress from './LongPress'
 
 const CATEGORY_DOT = {
   dev:      'bg-blue-400',
@@ -34,6 +35,8 @@ export default function WeeklyPlan({ onAddTask }) {
   const completing = useRef(new Set()) // double-submit guard
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const setActiveTab = useStore((s) => s.setActiveTab)
+  const setMainTab = useStore((s) => s.setMainTab)
+  const setActiveTask = useStore((s) => s.setActiveTask)
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 })
@@ -63,6 +66,7 @@ export default function WeeklyPlan({ onAddTask }) {
       })
       if (!r2.ok) throw new Error(`xp grant failed: ${r2.status}`)
 
+      window.dispatchEvent(new CustomEvent('mile:trophy'))
       mutate(`${API}/tasks`)
       mutate(`${API}/xp/balance`)
     } catch (err) {
@@ -70,6 +74,12 @@ export default function WeeklyPlan({ onAddTask }) {
     } finally {
       completing.current.delete(task.id)
     }
+  }
+
+  const focusTask = (task) => {
+    setActiveTask(adaptTask(task))
+    setMainTab('focus')
+    setActiveTab('timer')
   }
 
   const tasksByDay = weekDays.map((day) => ({
@@ -189,17 +199,17 @@ export default function WeeklyPlan({ onAddTask }) {
                   const done = isCompleted(task)
                   const progress = getProgress(task)
                   return (
-                    <motion.div
+                    <LongPress
                       key={task.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      onTap={() => focusTask(task)}
+                      onLongPress={() => { if (confirm(`Marquer « ${task.title} » comme terminée ?`)) completeTask(task) }}
+                      disabled={done}
                       className={cn(
-                        'p-2 rounded-lg text-[11px] cursor-pointer transition-all',
+                        'w-full text-left p-2 rounded-lg text-[11px] cursor-pointer transition-all',
                         done
                           ? 'bg-emerald-500/10 border border-emerald-500/30'
                           : 'bg-[var(--color-secondary)]/50 border border-[var(--color-border)]/30 hover:bg-[var(--color-secondary)]',
                       )}
-                      onClick={() => completeTask(task)}
                     >
                       <div className="flex items-center gap-2">
                         <div className={cn("w-2 h-2 rounded-full flex-shrink-0", getCategoryDot(task))} />
@@ -217,7 +227,7 @@ export default function WeeklyPlan({ onAddTask }) {
                           <CheckCircle2 className="ml-auto w-3 h-3 text-emerald-400" />
                         )}
                       </div>
-                    </motion.div>
+                    </LongPress>
                   )
                 })}
               <button

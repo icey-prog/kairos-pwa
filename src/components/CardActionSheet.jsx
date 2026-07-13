@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { motion } from 'framer-motion'
 import {
-  Brain, Pencil, Trash2, Star, Clock, TrendingUp, ChevronLeft, Bug, Eye,
+  Brain, Pencil, Trash2, Star, Clock, TrendingUp, ChevronLeft, Bug, Eye, Timer,
 } from 'lucide-react'
 import { Button, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../lib/ui'
 import BottomSheet from './BottomSheet'
@@ -16,6 +16,9 @@ import { API, apiFetch } from '../lib/api'
 import { resolveIcon } from '../lib/disciplineIcons'
 import { haptic } from '../lib/haptic'
 import { cn } from '../lib/utils'
+import { createLinkedQuest } from '../lib/questLink'
+import { adaptTask } from '../lib/taskBridge'
+import useStore from '../store/useStore'
 
 const QUALITY_STARS = (q) => '★'.repeat(q) + '☆'.repeat(5 - q)
 
@@ -27,6 +30,24 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
   const [saving, setSaving] = useState(false)
   const [revealed, setRevealed] = useState(false)   // answer hidden until user tries to recall
   const [illustrationSvg, setIllustrationSvg] = useState(null)
+  const setActiveTask = useStore((s) => s.setActiveTask)
+  const setMainTab = useStore((s) => s.setMainTab)
+  const setActiveTab = useStore((s) => s.setActiveTab)
+
+  const startFocus = async () => {
+    try {
+      const task = await createLinkedQuest({ title: `Réviser — ${card.front.slice(0, 180)}`, type: 'card', id: card.id })
+      mutate(`${API}/tasks`)
+      haptic.light()
+      setActiveTask(adaptTask(task))
+      setMainTab('focus')
+      setActiveTab('timer')
+      onClose()
+    } catch (err) {
+      console.error('[CardActionSheet.startFocus]', err)
+      haptic.error()
+    }
+  }
 
   // Reset to detail + hydrate edit form + load history each time a card opens.
   useEffect(() => {
@@ -209,6 +230,9 @@ export default function CardActionSheet({ open, onClose, card, disciplines, bySl
           <div className="flex gap-2 pt-1">
             <Button onClick={() => { haptic.select(); onReviewNow(card); onClose() }} className="flex-1 gap-2">
               <Brain className="w-4 h-4" /> Réviser
+            </Button>
+            <Button variant="outline" onClick={startFocus} className="gap-2">
+              <Timer className="w-4 h-4" />
             </Button>
             <Button variant="outline" onClick={() => { haptic.select(); setMode('edit') }} className="gap-2">
               <Pencil className="w-4 h-4" /> Éditer
