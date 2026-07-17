@@ -157,7 +157,7 @@ export default function Arena() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)]">
+    <div className="min-h-screen bg-[var(--color-background)] pb-28">
 
       {/* Navbar */}
       <div className="bg-[var(--color-background)] border-b border-[var(--color-border)] px-5 pt-14 pb-4">
