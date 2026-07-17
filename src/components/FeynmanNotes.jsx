@@ -46,7 +46,7 @@ const EMPTY_NOTE = {
 
 export default function FeynmanNotes() {
   const { data: rawNotes } = useSWR(`${API}/feynman`, fetcher, { refreshInterval: 10000 })
-  const { disciplines, bySlug } = useDisciplines()
+  const { disciplines, bySlug, togglePin } = useDisciplines()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [hubSlug, setHubSlug] = useState(null)        // null = discipline hub
   const [search, setSearch] = useState('')
@@ -236,6 +236,7 @@ export default function FeynmanNotes() {
               disciplines={disciplines}
               stats={hubStats}
               onSelect={(slug) => { setSearch(''); setHubSlug(slug) }}
+              onTogglePin={togglePin}
               emptyLabel="Aucune note pour l'instant."
             />
           )}

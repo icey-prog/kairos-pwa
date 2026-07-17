@@ -1,5 +1,5 @@
-import useSWR from 'swr'
-import { API, fetcher } from '../lib/api'
+import useSWR, { mutate } from 'swr'
+import { API, fetcher, apiFetch } from '../lib/api'
 import { DISCIPLINE_CONFIG } from '../lib/types'
 
 // Accept any of: bare array (FastAPI List response), {disciplines:[...]}, {data:[...]}.
@@ -38,9 +38,26 @@ export function useDisciplines() {
   const disciplines = fromApi ?? fallback
   const bySlug = Object.fromEntries(disciplines.map((d) => [d.slug, d]))
 
+  // Épinglage : discipline à réviser en priorité — remonte en tête du hub.
+  const togglePin = async (discipline) => {
+    if (!discipline?.id) return
+    try {
+      const res = await apiFetch(`${API}/disciplines/${discipline.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: !discipline.pinned }),
+      })
+      if (!res.ok) throw new Error(`toggle pin failed: ${res.status}`)
+      mutate(`${API}/disciplines`)
+    } catch (err) {
+      console.error('[useDisciplines.togglePin]', err)
+    }
+  }
+
   return {
     disciplines,
     bySlug,
+    togglePin,
     isLoading: !error && !data,
     isFallback: fromApi === null,
   }

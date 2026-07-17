@@ -64,7 +64,7 @@ const qualityLabels = [
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function SpacedRepetition() {
   const { data: rawItems } = useSWR(`${API}/spaced-cards`, fetcher, { refreshInterval: 10000 })
-  const { disciplines, bySlug } = useDisciplines()
+  const { disciplines, bySlug, togglePin } = useDisciplines()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewQueue, setReviewQueue] = useState([])      // snapshot — frozen at session start
@@ -425,6 +425,7 @@ export default function SpacedRepetition() {
               disciplines={disciplines}
               stats={hubStats}
               onSelect={(slug) => { setSearch(''); setHubSlug(slug) }}
+              onTogglePin={togglePin}
               emptyLabel="Aucune carte pour l'instant."
             />
           )}
