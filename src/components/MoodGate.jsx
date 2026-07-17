@@ -4,9 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import useStore from '../store/useStore'
 import { API, apiFetch } from '../lib/api'
 import { haptic } from '../lib/haptic'
-
-// Solo-user display name — update when auth is added
-const DISPLAY_NAME = 'ICE.Y'
+import { getUsername } from '../lib/auth'
+import { moodDateKey, moodScoreKey } from '../lib/moodKeys'
 
 const MOODS = [
   {
@@ -65,8 +64,8 @@ export default function MoodGate() {
       body: JSON.stringify({ score: mood.score }),
     }).catch(() => {})
 
-    localStorage.setItem('mile_last_mood_date', new Date().toDateString())
-    localStorage.setItem('mile_last_mood_score', mood.score.toString())
+    localStorage.setItem(moodDateKey(), new Date().toDateString())
+    localStorage.setItem(moodScoreKey(), mood.score.toString())
 
     setTimeout(() => {
       setConfirming(false)
@@ -104,7 +103,7 @@ export default function MoodGate() {
                 </p>
               </div>
               <h1 className="text-[2.25rem] font-bold text-[var(--color-foreground)] leading-tight tracking-tight">
-                Bonjour<br />{DISPLAY_NAME}
+                Bonjour<br />{(getUsername() || 'ICE.Y').toUpperCase()}
               </h1>
               <p className="mt-3 text-[15px] text-[var(--color-muted-foreground)] leading-relaxed">
                 Ton niveau d'énergie adapte le protocole du jour.

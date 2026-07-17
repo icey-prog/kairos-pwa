@@ -13,7 +13,8 @@ function extractList(data) {
 // Single source of truth for disciplines, served by the backend.
 // DISCIPLINE_CONFIG (src/lib/types.js) is only a fallback for offline / empty API.
 export function useDisciplines() {
-  const { data, error } = useSWR(`${API}/disciplines`, fetcher, { refreshInterval: 30000 })
+  // Bibliothèque partagée, mais filtrée aux disciplines choisies par ce user à l'onboarding.
+  const { data, error } = useSWR(`${API}/user/disciplines`, fetcher, { refreshInterval: 30000 })
 
   const list = extractList(data)
   // Only treat a non-empty API list as authoritative; empty/garbage → fallback.
@@ -42,13 +43,13 @@ export function useDisciplines() {
   const togglePin = async (discipline) => {
     if (!discipline?.id) return
     try {
-      const res = await apiFetch(`${API}/disciplines/${discipline.id}`, {
+      const res = await apiFetch(`${API}/user/disciplines/${discipline.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pinned: !discipline.pinned }),
       })
       if (!res.ok) throw new Error(`toggle pin failed: ${res.status}`)
-      mutate(`${API}/disciplines`)
+      mutate(`${API}/user/disciplines`)
     } catch (err) {
       console.error('[useDisciplines.togglePin]', err)
     }

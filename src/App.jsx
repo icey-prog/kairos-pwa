@@ -1,16 +1,20 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import useStore from './store/useStore'
 import MoodGate from './components/MoodGate'
+import AuthGate from './components/AuthGate'
+import DisciplinePicker from './components/DisciplinePicker'
 import Arena from './components/Arena'
 import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
-import FloatingNav from './components/FloatingNav'
+import BottomNav from './components/BottomNav'
 import NetworkBanner from './components/NetworkBanner'
 import TrophyCelebration from './components/TrophyCelebration'
 import { flush } from './lib/offlineQueue'
 import { API, apiFetch } from './lib/api'
 import { adaptTask } from './lib/taskBridge'
+import { getToken } from './lib/auth'
+import { moodDateKey, moodScoreKey } from './lib/moodKeys'
 
 export default function App() {
   const moodLogged = useStore((s) => s.moodLogged)
@@ -18,6 +22,17 @@ export default function App() {
   const setActiveTask = useStore((s) => s.setActiveTask)
   const setMainTab = useStore((s) => s.setMainTab)
   const setActiveTab = useStore((s) => s.setActiveTab)
+
+  const [token, setToken] = useState(getToken())
+  const [onboarded, setOnboarded] = useState(null) // null = pas encore vérifié
+
+  useEffect(() => {
+    if (!token) return
+    apiFetch(`${API}/user/disciplines`)
+      .then((r) => r.json())
+      .then((subs) => setOnboarded(Array.isArray(subs) && subs.length > 0))
+      .catch(() => setOnboarded(true)) // hors ligne : ne pas bloquer sur l'onboarding
+  }, [token])
 
   // Focus a task by id: fetch tasks list, find it, activate it, navigate
   const focusTaskById = async (taskId) => {
@@ -33,11 +48,12 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (!token) return
     // Check if mood was already logged today
-    const lastLogged = localStorage.getItem('mile_last_mood_date')
+    const lastLogged = localStorage.getItem(moodDateKey())
     const today = new Date().toDateString()
     if (lastLogged === today) {
-      const score = parseInt(localStorage.getItem('mile_last_mood_score')) || 3
+      const score = parseInt(localStorage.getItem(moodScoreKey())) || 3
       setMood(score)
     }
 
@@ -75,10 +91,20 @@ export default function App() {
       return () => navigator.serviceWorker.removeEventListener('message', handler)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setMood])
+  }, [setMood, token])
 
   // Drain the offline queue on every app start (connection may have returned while closed)
   useEffect(() => { flush() }, [])
+
+  if (!token) {
+    return <AuthGate onSignedUp={() => setToken(getToken())} />
+  }
+  if (onboarded === null) {
+    return null // vérification en cours — évite un flash MoodGate/Picker
+  }
+  if (!onboarded) {
+    return <DisciplinePicker onDone={() => setOnboarded(true)} />
+  }
 
   return (
     <>
@@ -86,7 +112,7 @@ export default function App() {
       <ErrorBoundary>
         {moodLogged ? <Arena /> : <MoodGate />}
       </ErrorBoundary>
-      <FloatingNav />
+      <BottomNav />
       <TrophyCelebration />
       <Toaster position="bottom-right" />
     </>

@@ -3,7 +3,12 @@ import { enqueue } from './offlineQueue'
 export const API = import.meta.env.VITE_API_URL ?? 'https://kairosapi.duckdns.org/api'
 
 const _API_KEY = import.meta.env.VITE_API_KEY ?? ''
-const _authHeader = () => (_API_KEY ? { 'X-API-Key': _API_KEY } : {})
+const _authHeader = () => {
+  const headers = _API_KEY ? { 'X-API-Key': _API_KEY } : {}
+  const userToken = localStorage.getItem('mile_user_token')
+  if (userToken) headers['X-User-Token'] = userToken
+  return headers
+}
 
 const MUTATIONS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
