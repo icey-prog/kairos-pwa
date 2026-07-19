@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Award, Lock, Unlock, Trophy, Flame, Star,
@@ -8,20 +8,43 @@ import useSWR from 'swr'
 import { Card, CardContent } from '../lib/ui'
 import { API, fetcher } from '../lib/api'
 
+// Image custom : dépose un fichier public/badges/<id>.png ou .gif — les GIF
+// s'animent tout seuls dans <img>. Fichier absent → fallback icône lucide.
 const BADGES_CONFIG = [
-  { id: 'first-step',  name: 'Premier Pas',   description: 'Gagner tes premiers XP',    icon: 'Footprints', condition: { type: 'xp', value: 10 } },
-  { id: 'flame',       name: 'En Feu',         description: 'Atteindre 100 XP',          icon: 'Flame',      condition: { type: 'xp', value: 100 } },
-  { id: 'warrior',     name: 'Guerrier',        description: 'Atteindre 500 XP',          icon: 'Sword',      condition: { type: 'xp', value: 500 } },
-  { id: 'neural',      name: 'Neural',          description: 'Atteindre 1 000 XP',        icon: 'Cpu',        condition: { type: 'xp', value: 1000 } },
-  { id: 'spark',       name: 'Étincelle',       description: 'Atteindre 2 500 XP',        icon: 'Sparkles',   condition: { type: 'xp', value: 2500 } },
-  { id: 'scholar',     name: 'Érudit',          description: 'Atteindre 5 000 XP',        icon: 'BookOpen',   condition: { type: 'xp', value: 5000 } },
-  { id: 'medalist',    name: 'Médaillé',        description: 'Atteindre 10 000 XP',       icon: 'Medal',      condition: { type: 'xp', value: 10000 } },
-  { id: 'crowned',     name: 'Couronné',        description: 'Atteindre 25 000 XP',       icon: 'Crown',      condition: { type: 'xp', value: 25000 } },
+  { id: 'first-step',  name: 'Premier Pas',   description: 'Gagner tes premiers XP',    icon: 'Footprints', image: '/badges/first_step.png', condition: { type: 'xp', value: 10 } },
+  { id: 'flame',       name: 'En Feu',         description: 'Atteindre 100 XP',          icon: 'Flame',      image: '/badges/flame.jpg',      condition: { type: 'xp', value: 100 } },
+  { id: 'warrior',     name: 'Guerrier',        description: 'Atteindre 500 XP',          icon: 'Sword',      image: '/badges/warrior.gif',    condition: { type: 'xp', value: 500 } },
+  { id: 'neural',      name: 'Neural',          description: 'Atteindre 1 000 XP',        icon: 'Cpu',        image: '/badges/neural.gif',     condition: { type: 'xp', value: 1000 } },
+  { id: 'spark',       name: 'Étincelle',       description: 'Atteindre 2 500 XP',        icon: 'Sparkles',   image: '/badges/spark.jpg',      condition: { type: 'xp', value: 2500 } },
+  { id: 'scholar',     name: 'Érudit',          description: 'Atteindre 5 000 XP',        icon: 'BookOpen',   image: '/badges/scholar.jpg',    condition: { type: 'xp', value: 5000 } },
+  { id: 'medalist',    name: 'Médaillé',        description: 'Atteindre 10 000 XP',       icon: 'Medal',      image: '/badges/minecraft.png',  condition: { type: 'xp', value: 10000 } },
+  { id: 'crowned',     name: 'Couronné',        description: 'Atteindre 25 000 XP',       icon: 'Crown',      image: '/badges/crowned.gif',    condition: { type: 'xp', value: 25000 } },
 ]
 
 const ICON_MAP = { Footprints, Flame, Sword, Cpu, Sparkles, BookOpen, Medal, Crown, Award }
 
 const getBadgeIcon = (name) => ICON_MAP[name] ?? Award
+
+// Visuel d'un badge : image custom si le fichier existe, sinon icône lucide.
+// locked = image en niveaux de gris assombrie derrière le cadenas.
+function BadgeVisual({ badge, locked = false }) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const Icon = getBadgeIcon(badge.icon)
+
+  if (badge.image && !imgFailed) {
+    return (
+      <img
+        src={badge.image}
+        alt={badge.name}
+        onError={() => setImgFailed(true)}
+        className={`w-full h-full object-contain ${locked ? 'grayscale opacity-40' : ''}`}
+        draggable={false}
+      />
+    )
+  }
+  if (locked) return <Lock className="w-5 h-5 text-[var(--color-muted-foreground)]" />
+  return <Icon className="w-6 h-6 text-amber-400" />
+}
 
 export default function Badges() {
   const { data: xpData } = useSWR(`${API}/xp/balance`, fetcher, { refreshInterval: 5000 })
@@ -96,31 +119,28 @@ export default function Badges() {
             Débloqués ({unlocked.length})
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {unlocked.map((badge, i) => {
-              const Icon = getBadgeIcon(badge.icon)
-              return (
-                <motion.div
-                  key={badge.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05, type: 'spring' }}
-                >
-                  <Card className="glass border-0 card-hover overflow-hidden">
-                    <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
-                    <CardContent className="p-4 text-center">
-                      <motion.div
-                        className="w-12 h-12 mx-auto mb-2 rounded-2xl bg-amber-400/20 flex items-center justify-center"
-                        whileHover={{ rotate: [0, -10, 10, 0] }}
-                      >
-                        <Icon className="w-6 h-6 text-amber-400" />
-                      </motion.div>
-                      <h3 className="font-semibold text-sm text-[var(--color-foreground)] mb-1">{badge.name}</h3>
-                      <p className="text-xs text-[var(--color-muted-foreground)]">{badge.description}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
+            {unlocked.map((badge, i) => (
+              <motion.div
+                key={badge.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05, type: 'spring' }}
+              >
+                <Card className="glass border-0 card-hover overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
+                  <CardContent className="p-4 text-center">
+                    <motion.div
+                      className="w-16 h-16 mx-auto mb-2 rounded-2xl overflow-hidden flex items-center justify-center"
+                      whileHover={{ rotate: [0, -10, 10, 0] }}
+                    >
+                      <BadgeVisual badge={badge} />
+                    </motion.div>
+                    <h3 className="font-semibold text-sm text-[var(--color-foreground)] mb-1">{badge.name}</h3>
+                    <p className="text-xs text-[var(--color-muted-foreground)]">{badge.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         </div>
       )}
@@ -139,10 +159,15 @@ export default function Badges() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04 }}
             >
-              <Card className="glass border-0 opacity-50">
+              <Card className="glass border-0 opacity-60">
                 <CardContent className="p-4 text-center">
-                  <div className="w-12 h-12 mx-auto mb-2 rounded-2xl bg-[var(--color-secondary)] flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-[var(--color-muted-foreground)]" />
+                  <div className="relative w-16 h-16 mx-auto mb-2 rounded-2xl overflow-hidden bg-[var(--color-secondary)] flex items-center justify-center">
+                    <BadgeVisual badge={badge} locked />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">
+                        <Lock className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </div>
                   </div>
                   <h3 className="font-semibold text-sm text-[var(--color-foreground)] mb-1">{badge.name}</h3>
                   <p className="text-[10px] text-[var(--color-muted-foreground)]">

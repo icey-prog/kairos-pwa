@@ -22,6 +22,17 @@ export const signup = async (username) => {
   return user
 }
 
+// Connexion par token existant (ex: compte admin migré, changement d'appareil).
+// Valide le token via /auth/me avant de le stocker.
+export const loginWithToken = async (token) => {
+  const res = await fetch(`${API}/auth/me`, { headers: { 'X-User-Token': token.trim() } })
+  if (!res.ok) throw new Error(res.status === 401 ? 'Token invalide.' : `${res.status} ${res.statusText}`)
+  const user = await res.json()
+  localStorage.setItem(TOKEN_KEY, token.trim())
+  localStorage.setItem(USERNAME_KEY, user.username)
+  return user
+}
+
 export const logout = () => {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(USERNAME_KEY)

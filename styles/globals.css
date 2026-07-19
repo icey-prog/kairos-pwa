@@ -141,3 +141,27 @@ html, body {
 .tippy-box[data-theme~='mile'] .tippy-arrow {
   color: var(--color-card);
 }
+
+/* ─── Liquid-glass lens — sélecteur actif de la bottom nav ────────────────
+   Verre convexe posé SUR la surface glass de la barre : fond translucide
+   dégradé, liseré lumineux en haut (reflet), ombre douce pour le relief.
+   CSS pur (pas un second filtre SVG) : le glass-on-glass lourd créerait du
+   bruit visuel — cf. règle Liquid Glass "avoid overusing". */
+.glass-lens {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.12));
+  backdrop-filter: blur(8px) saturate(1.6) brightness(1.06);
+  -webkit-backdrop-filter: blur(8px) saturate(1.6) brightness(1.06);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.06),
+    0 2px 10px rgba(17, 17, 26, 0.12);
+}
+.dark-mode .glass-lens {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.25),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 2px 10px rgba(0, 0, 0, 0.35);
+}

@@ -62,7 +62,7 @@ export default function AuthGate({ onSignedUp }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-2xl bg-[#007AFF] text-white font-semibold text-[15px] disabled:opacity-50"
+            className="w-full py-4 rounded-2xl bg-[#007AFF] text-white font-semibold text-[15px] disabled:opacity-50 transition-transform duration-200 active:scale-[0.98]"
           >
             {loading ? 'Création…' : 'Entrer'}
           </button>

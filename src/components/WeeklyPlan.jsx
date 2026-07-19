@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Calendar, ChevronLeft, ChevronRight, Clock,
-  CheckCircle2, TrendingUp, Plus,
+  CheckCircle2, Infinity, Plus,
 } from 'lucide-react'
 import { format, addWeeks, subWeeks, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -131,7 +131,7 @@ export default function WeeklyPlan({ onAddTask }) {
         {[
           { label: 'Tâches totales', value: tasks.length,        Icon: Calendar,     color: 'text-blue-400',    bg: 'bg-blue-500/20' },
           { label: 'Complétées',     value: completedCount,       Icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
-          { label: 'Progression',    value: `${weekProgress.toFixed(0)}%`, Icon: TrendingUp,  color: 'text-amber-400',   bg: 'bg-amber-500/20' },
+          { label: 'Progression',    value: `${weekProgress.toFixed(0)}%`, Icon: Infinity,  color: 'text-amber-400',   bg: 'bg-amber-500/20' },
           { label: 'Durée prévue',   value: `${(totalMinutes / 60).toFixed(1)}h`, Icon: Clock, color: 'text-purple-400', bg: 'bg-purple-500/20' },
         ].map(({ label, value, Icon, color, bg }) => (
           <Card key={label} className="glass border-0">

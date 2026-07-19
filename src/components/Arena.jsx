@@ -11,8 +11,8 @@ import {
   Clock,
   Plus,
   BookOpen,
-  Pencil,
-  TrendingUp,
+  NotebookPen,
+  Infinity,
 } from 'lucide-react'
 import useStore from '../store/useStore'
 import { API, fetcher, apiFetch } from '../lib/api'
@@ -44,10 +44,10 @@ const SUB_TABS = {
   ],
   learn: [
     { id: 'sr',      label: 'Flashcards', icon: BookOpen },
-    { id: 'feynman', label: 'Feynman',    icon: Pencil }
+    { id: 'feynman', label: 'Feynman',    icon: NotebookPen }
   ],
   dashboard: [
-    { id: 'week',    label: 'Progression',icon: TrendingUp },
+    { id: 'week',    label: 'Progression',icon: Infinity },
     { id: 'badges',  label: 'Hauts Faits', icon: Trophy }
   ]
 }

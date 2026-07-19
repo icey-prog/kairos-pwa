@@ -7,7 +7,7 @@ import Arena from './components/Arena'
 import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
-import BottomNav from './components/BottomNav'
+import WheelNav from './components/WheelNav'
 import NetworkBanner from './components/NetworkBanner'
 import TrophyCelebration from './components/TrophyCelebration'
 import { flush } from './lib/offlineQueue'
@@ -112,7 +112,7 @@ export default function App() {
       <ErrorBoundary>
         {moodLogged ? <Arena /> : <MoodGate />}
       </ErrorBoundary>
-      <BottomNav />
+      <WheelNav />
       <TrophyCelebration />
       <Toaster position="bottom-right" />
     </>

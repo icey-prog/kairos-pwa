@@ -72,7 +72,7 @@ export default function DisciplinePicker({ onDone }) {
               <button
                 key={d.id}
                 onClick={() => toggle(d.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 min-h-[44px] rounded-xl border transition-colors duration-200 active:scale-[0.99] ${
                   isSelected ? 'bg-[#007AFF]/10 border-[#007AFF]' : 'bg-[var(--color-secondary)] border-transparent'
                 }`}
               >
@@ -87,7 +87,7 @@ export default function DisciplinePicker({ onDone }) {
         <button
           onClick={handleSubmit}
           disabled={saving || selected.size === 0}
-          className="w-full py-4 rounded-2xl bg-[#007AFF] text-white font-semibold text-[15px] disabled:opacity-50 mt-4"
+          className="w-full py-4 rounded-2xl bg-[#007AFF] text-white font-semibold text-[15px] disabled:opacity-50 mt-4 transition-transform duration-200 active:scale-[0.98]"
         >
           {saving ? 'Enregistrement…' : `Continuer (${selected.size} choisi${selected.size > 1 ? 's' : ''})`}
         </button>
