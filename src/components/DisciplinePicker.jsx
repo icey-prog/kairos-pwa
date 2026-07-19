@@ -42,7 +42,7 @@ export default function DisciplinePicker({ onDone }) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-[var(--color-background)] flex flex-col px-6 py-12"
+      className="min-h-screen flex flex-col px-6 py-12"
     >
       <div className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
       <div className="max-w-sm mx-auto w-full flex flex-col flex-1">

@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
 import WheelNav from './components/WheelNav'
+import PixelBlastBackground from './components/PixelBlastBackground'
 import NetworkBanner from './components/NetworkBanner'
 import TrophyCelebration from './components/TrophyCelebration'
 import { flush } from './lib/offlineQueue'
@@ -96,25 +97,31 @@ export default function App() {
   // Drain the offline queue on every app start (connection may have returned while closed)
   useEffect(() => { flush() }, [])
 
+  let screen
   if (!token) {
-    return <AuthGate onSignedUp={() => setToken(getToken())} />
-  }
-  if (onboarded === null) {
-    return null // vérification en cours — évite un flash MoodGate/Picker
-  }
-  if (!onboarded) {
-    return <DisciplinePicker onDone={() => setOnboarded(true)} />
+    screen = <AuthGate onSignedUp={() => setToken(getToken())} />
+  } else if (onboarded === null) {
+    screen = null // vérification en cours — évite un flash MoodGate/Picker
+  } else if (!onboarded) {
+    screen = <DisciplinePicker onDone={() => setOnboarded(true)} />
+  } else {
+    screen = (
+      <>
+        <NetworkBanner />
+        <ErrorBoundary>
+          {moodLogged ? <Arena /> : <MoodGate />}
+        </ErrorBoundary>
+        <WheelNav />
+        <TrophyCelebration />
+        <Toaster position="bottom-right" />
+      </>
+    )
   }
 
   return (
     <>
-      <NetworkBanner />
-      <ErrorBoundary>
-        {moodLogged ? <Arena /> : <MoodGate />}
-      </ErrorBoundary>
-      <WheelNav />
-      <TrophyCelebration />
-      <Toaster position="bottom-right" />
+      <PixelBlastBackground />
+      {screen}
     </>
   )
 }

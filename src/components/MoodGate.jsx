@@ -84,7 +84,7 @@ export default function MoodGate() {
           initial={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: -16 }}
           transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-          className="min-h-screen bg-[var(--color-background)] flex flex-col justify-center px-6 py-12"
+          className="min-h-screen flex flex-col justify-center px-6 py-12"
         >
           {/* Top accent bar — distinctive visual anchor */}
           <div className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
