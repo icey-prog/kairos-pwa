@@ -18,8 +18,12 @@
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
+/* transparent, pas var(--color-background) : le fond html/body peint AU-DESSUS
+   des éléments position:fixed à z-index négatif (comportement réel navigateur,
+   pas juste théorique) — ça masquait complètement PixelBlastBackground.
+   Le fond visible vient maintenant de PixelBlastBackground (wash + pixels). */
 html, body {
-  background-color: var(--color-background);
+  background-color: transparent;
   color: var(--color-foreground);
   transition: background-color 0.3s ease, color 0.3s ease;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
