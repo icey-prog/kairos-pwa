@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { signup } from '../lib/auth'
+import { signup, loginWithToken } from '../lib/auth'
 
 export default function AuthGate({ onSignedUp }) {
   const [username, setUsername] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [tokenMode, setTokenMode] = useState(false)
+  const [tokenValue, setTokenValue] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,6 +23,21 @@ export default function AuthGate({ onSignedUp }) {
       onSignedUp()
     } catch (err) {
       setError(err.message || 'Inscription impossible.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTokenSubmit = async (e) => {
+    e.preventDefault()
+    if (!tokenValue.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      await loginWithToken(tokenValue)
+      onSignedUp()
+    } catch (err) {
+      setError(err.message || 'Connexion impossible.')
     } finally {
       setLoading(false)
     }
@@ -42,31 +59,60 @@ export default function AuthGate({ onSignedUp }) {
             </p>
           </div>
           <h1 className="text-[2.25rem] font-bold text-[var(--color-foreground)] leading-tight tracking-tight">
-            Choisis<br />ton pseudo
+            {tokenMode ? <>Connexion<br />par token</> : <>Choisis<br />ton pseudo</>}
           </h1>
           <p className="mt-3 text-[15px] text-[var(--color-muted-foreground)] leading-relaxed">
-            Tes notes, cartes et progression te seront propres — invisibles aux autres testeurs.
+            {tokenMode
+              ? 'Colle le token de ton compte existant (affiché à la création ou par le script de migration).'
+              : 'Tes notes, cartes et progression te seront propres — invisibles aux autres testeurs.'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            autoFocus
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="ex : icey"
-            maxLength={50}
-            className="w-full px-5 py-4 rounded-2xl bg-[var(--color-secondary)] text-[var(--color-foreground)] text-[15px] outline-none focus:ring-2 focus:ring-[#007AFF]"
-          />
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 rounded-2xl bg-[#007AFF] text-white font-semibold text-[15px] disabled:opacity-50 transition-transform duration-200 active:scale-[0.98]"
-          >
-            {loading ? 'Création…' : 'Entrer'}
-          </button>
-        </form>
+        {tokenMode ? (
+          <form onSubmit={handleTokenSubmit} className="space-y-3">
+            <input
+              autoFocus
+              value={tokenValue}
+              onChange={(e) => setTokenValue(e.target.value)}
+              placeholder="colle ton token ici"
+              className="w-full px-5 py-4 rounded-2xl bg-[var(--color-secondary)] text-[var(--color-foreground)] text-[15px] outline-none focus:ring-2 focus:ring-[#007AFF] font-mono"
+            />
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 rounded-2xl bg-[#007AFF] text-white font-semibold text-[15px] disabled:opacity-50 transition-transform duration-200 active:scale-[0.98]"
+            >
+              {loading ? 'Vérification…' : 'Se connecter'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              autoFocus
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="ex : icey"
+              maxLength={50}
+              className="w-full px-5 py-4 rounded-2xl bg-[var(--color-secondary)] text-[var(--color-foreground)] text-[15px] outline-none focus:ring-2 focus:ring-[#007AFF]"
+            />
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 rounded-2xl bg-[#007AFF] text-white font-semibold text-[15px] disabled:opacity-50 transition-transform duration-200 active:scale-[0.98]"
+            >
+              {loading ? 'Création…' : 'Entrer'}
+            </button>
+          </form>
+        )}
+
+        <button
+          onClick={() => { setTokenMode(!tokenMode); setError('') }}
+          className="mt-6 w-full text-center text-sm text-[var(--color-muted-foreground)] underline underline-offset-4 min-h-[44px]"
+        >
+          {tokenMode ? '← Créer un nouveau compte' : "J'ai déjà un token"}
+        </button>
       </div>
     </motion.div>
   )
