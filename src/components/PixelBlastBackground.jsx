@@ -4,16 +4,14 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 // le fond apparaît une fraction de seconde après l'app, c'est voulu.
 const PixelBlast = lazy(() => import('./PixelBlast/PixelBlast'))
 
-// Palette perso : nuances neutres, un ton clair + un ton foncé par thème
-// pour que les pixels restent lisibles sur le fond de la page.
+// Wash = couleur réelle de la page (identique à l'ancien --color-background,
+// html/body est devenu transparent — voir globals.css). Le design ne change
+// pas visuellement au centre ; seul un accent pixel discret orne les coins.
 const PALETTE = {
-  dark: { pixel: '#BFBFBF', wash: '#1A1A1A' },  // Ash sur Jet Black
-  light: { pixel: '#353A3E', wash: '#E0E0E0' }, // Graphite sur Platinum
+  dark: { pixel: '#BFBFBF', wash: '#000000' },
+  light: { pixel: '#353A3E', wash: '#ffffff' },
 }
 
-// Fond d'écran global : pixels dithering animés (WebGL), derrière tout le
-// contenu. pointer-events none — les ripples au clic sont sacrifiés pour ne
-// jamais bloquer un tap sur l'UI.
 export default function PixelBlastBackground() {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark-mode'))
 
@@ -35,22 +33,17 @@ export default function PixelBlastBackground() {
       <Suspense fallback={null}>
         <PixelBlast
           variant="square"
-          pixelSize={4}
+          pixelSize={3}
           color={pixel}
-          patternScale={2}
-          patternDensity={1}
+          patternScale={2.5}
+          patternDensity={0.6}
           pixelSizeJitter={0}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
+          enableRipples={false}
           liquid={false}
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.7}
-          edgeFade={0.25}
+          speed={0.35}
+          edgeFade={0.32}
           transparent
+          style={{ opacity: 0.35 }}
         />
       </Suspense>
     </div>

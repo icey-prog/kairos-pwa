@@ -280,9 +280,14 @@ void main(){
   else                                   M = coverage;
 
   if (uEdgeFade > 0.0) {
+    // Concentré aux coins : visible seulement là où on est proche des DEUX
+    // bords (x ET y), pas juste d'un seul — un simple "edge glow" longerait
+    // les 4 côtés en continu, alors qu'on veut juste les 4 angles de l'écran.
     vec2 norm = gl_FragCoord.xy / uResolution;
-    float edge = min(min(norm.x, norm.y), min(1.0 - norm.x, 1.0 - norm.y));
-    float fade = smoothstep(0.0, uEdgeFade, edge);
+    float distX = min(norm.x, 1.0 - norm.x);
+    float distY = min(norm.y, 1.0 - norm.y);
+    float cornerDist = max(distX, distY);
+    float fade = 1.0 - smoothstep(0.0, uEdgeFade, cornerDist);
     M *= fade;
   }
 

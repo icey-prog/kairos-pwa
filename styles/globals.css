@@ -20,8 +20,9 @@
 /* ─── Base ────────────────────────────────────────────────────────────────── */
 /* transparent, pas var(--color-background) : le fond html/body peint AU-DESSUS
    des éléments position:fixed à z-index négatif (comportement réel navigateur,
-   pas juste théorique) — ça masquait complètement PixelBlastBackground.
-   Le fond visible vient maintenant de PixelBlastBackground (wash + pixels). */
+   pas juste théorique) — ça masquait complètement PixelBlastBackground, qui
+   fournit maintenant lui-même le wash uni (mêmes couleurs qu'avant) + l'accent
+   pixel discret dans les coins par-dessus. */
 html, body {
   background-color: transparent;
   color: var(--color-foreground);
