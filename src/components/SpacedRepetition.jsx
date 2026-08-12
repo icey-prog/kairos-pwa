@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import Fuse from 'fuse.js'
 import {
   Repeat, Plus, Brain, Clock, CheckCircle2, XCircle,
-  TrendingUp, Search, RotateCcw, ChevronRight, ChevronLeft, NotebookPen,
+  TrendingUp, Search, RotateCcw, ChevronRight, ChevronLeft, NotebookPen, X,
 } from 'lucide-react'
 import { differenceInDays, parseISO, isAfter, startOfDay } from 'date-fns'
 import useSWR, { mutate } from 'swr'
@@ -206,6 +206,21 @@ export default function SpacedRepetition() {
     }
   }
 
+  // Leave the session early — cards already graded stay graded (persisted per-card in
+  // handleReview above), the rest of the queue is simply abandoned. User's free to answer
+  // as many or as few cards as they want, no forced completion.
+  const handleQuit = async () => {
+    const gradedCount = currentReviewIndex
+    if (gradedCount > 0) {
+      await awardSessionXp(gradedCount)
+      await logReviewQuest(gradedCount)
+    }
+    setIsReviewMode(false)
+    setReviewQueue([])
+    setCurrentReviewIndex(0)
+    setShowAnswer(false)
+  }
+
   const handleReview = async (quality) => {
     const currentItem = reviewQueue[currentReviewIndex]
     const updated = sm2(currentItem, quality)
@@ -263,9 +278,18 @@ export default function SpacedRepetition() {
                 <Repeat className="w-5 h-5 text-emerald-400" />
                 Session de révision
               </CardTitle>
-              <span className="text-sm text-[var(--color-muted-foreground)]">
-                {currentReviewIndex + 1} / {reviewQueue.length}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-[var(--color-muted-foreground)]">
+                  {currentReviewIndex + 1} / {reviewQueue.length}
+                </span>
+                <button
+                  onClick={handleQuit}
+                  aria-label="Quitter la session"
+                  className="w-7 h-7 flex items-center justify-center rounded-full text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-secondary)] transition-colors active:scale-90"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="h-2 bg-[var(--color-secondary)] rounded-full overflow-hidden mt-2">
               <motion.div
