@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { mutate } from 'swr'
-import { Pencil, Repeat, Trash2, ChevronLeft, Plus, Check, Sparkles, Search, BookOpen, Edit3, Timer } from 'lucide-react'
+import { Pencil, Repeat, Trash2, ChevronLeft, ChevronRight, Plus, Check, Sparkles, Search, BookOpen, Edit3, Timer } from 'lucide-react'
 import { Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tip } from '../lib/ui'
 import BottomSheet from './BottomSheet'
 import KnowledgeBadges from './KnowledgeBadges'
@@ -21,7 +21,7 @@ const masteryColor = (lvl) =>
   lvl >= 80 ? 'text-emerald-400' : lvl >= 60 ? 'text-blue-400' : lvl >= 40 ? 'text-amber-400' : 'text-rose-400'
 
 // Full detail view for a Feynman note. Modes: detail (read) → edit | convert.
-export default function NoteActionSheet({ open, onClose, note, disciplines, bySlug }) {
+export default function NoteActionSheet({ open, onClose, note, disciplines, bySlug, onNext, onPrev }) {
   const [mode, setMode] = useState('detail')
   const [form, setForm] = useState(null)
   const [converted, setConverted] = useState({})   // gap index → true once a card is created
@@ -290,6 +290,22 @@ export default function NoteActionSheet({ open, onClose, note, disciplines, bySl
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
+          {(onPrev || onNext) && (
+            <div className="flex gap-2">
+              {onPrev && (
+                <Button variant="outline" onClick={() => { haptic.light(); onPrev() }} className="flex-1 gap-1">
+                  <ChevronLeft className="w-4 h-4" />
+                  Précédente
+                </Button>
+              )}
+              {onNext && (
+                <Button variant="outline" onClick={() => { haptic.light(); onNext() }} className="flex-1 gap-1">
+                  Suivante
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

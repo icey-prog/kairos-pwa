@@ -459,6 +459,14 @@ export default function FeynmanNotes() {
         note={activeNote}
         disciplines={disciplines}
         bySlug={bySlug}
+        onNext={(() => {
+          const i = disciplineNotes.findIndex((n) => n.id === activeNote?.id)
+          return i >= 0 && i < disciplineNotes.length - 1 ? () => setActiveNote(disciplineNotes[i + 1]) : null
+        })()}
+        onPrev={(() => {
+          const i = disciplineNotes.findIndex((n) => n.id === activeNote?.id)
+          return i > 0 ? () => setActiveNote(disciplineNotes[i - 1]) : null
+        })()}
       />
     </motion.div>
   )

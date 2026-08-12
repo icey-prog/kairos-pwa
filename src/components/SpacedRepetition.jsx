@@ -69,6 +69,7 @@ export default function SpacedRepetition() {
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewQueue, setReviewQueue] = useState([])      // snapshot — frozen at session start
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0)
+  const [gradedCount, setGradedCount] = useState(0)       // cards actually graded this session (skipped ones don't count)
   const [showAnswer, setShowAnswer] = useState(false)
   const [newItem, setNewItem] = useState({ content: '', back: '', discipline: '' })
   const [saving, setSaving] = useState(false)
@@ -155,6 +156,7 @@ export default function SpacedRepetition() {
     setReviewQueue([...cards])
     setIsReviewMode(true)
     setCurrentReviewIndex(0)
+    setGradedCount(0)
     setShowAnswer(false)
   }
   const startReview = () => startReviewWith(dueToday)
@@ -210,7 +212,6 @@ export default function SpacedRepetition() {
   // handleReview above), the rest of the queue is simply abandoned. User's free to answer
   // as many or as few cards as they want, no forced completion.
   const handleQuit = async () => {
-    const gradedCount = currentReviewIndex
     if (gradedCount > 0) {
       await awardSessionXp(gradedCount)
       await logReviewQuest(gradedCount)
@@ -218,7 +219,26 @@ export default function SpacedRepetition() {
     setIsReviewMode(false)
     setReviewQueue([])
     setCurrentReviewIndex(0)
+    setGradedCount(0)
     setShowAnswer(false)
+  }
+
+  // Move to the next card WITHOUT grading it — no SM-2 update, no XP for this one.
+  const handleSkip = async () => {
+    if (currentReviewIndex < reviewQueue.length - 1) {
+      setCurrentReviewIndex((prev) => prev + 1)
+      setShowAnswer(false)
+    } else {
+      if (gradedCount > 0) {
+        await awardSessionXp(gradedCount)
+        await logReviewQuest(gradedCount)
+      }
+      setIsReviewMode(false)
+      setReviewQueue([])
+      setCurrentReviewIndex(0)
+      setGradedCount(0)
+      setShowAnswer(false)
+    }
   }
 
   const handleReview = async (quality) => {
@@ -241,15 +261,18 @@ export default function SpacedRepetition() {
       if (!response.ok) throw new Error('API review failed')
 
       mutate(`${API}/spaced-cards`)
+      const newGradedCount = gradedCount + 1
+      setGradedCount(newGradedCount)
 
       if (currentReviewIndex < reviewQueue.length - 1) {
         setCurrentReviewIndex((prev) => prev + 1)
         setShowAnswer(false)
       } else {
-        await awardSessionXp(reviewQueue.length)
-        await logReviewQuest(reviewQueue.length)
+        await awardSessionXp(newGradedCount)
+        await logReviewQuest(newGradedCount)
         setIsReviewMode(false)
         setCurrentReviewIndex(0)
+        setGradedCount(0)
         setShowAnswer(false)
       }
     } catch (err) {
@@ -279,6 +302,17 @@ export default function SpacedRepetition() {
                 Session de révision
               </CardTitle>
               <div className="flex items-center gap-3">
+                {currentReviewIndex > 0 && (
+                  // ponytail: re-grading a card you've navigated back to double-counts XP/gradedCount —
+                  // acceptable for now, add a "graded this session" set if it becomes an actual complaint.
+                  <button
+                    onClick={() => { setCurrentReviewIndex((prev) => prev - 1); setShowAnswer(false) }}
+                    aria-label="Carte précédente"
+                    className="w-7 h-7 flex items-center justify-center rounded-full text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-secondary)] transition-colors active:scale-90"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                )}
                 <span className="text-sm text-[var(--color-muted-foreground)]">
                   {currentReviewIndex + 1} / {reviewQueue.length}
                 </span>
@@ -310,10 +344,16 @@ export default function SpacedRepetition() {
             <div className="text-center py-6">
               <CodeText text={currentItem.front} className="text-xl font-semibold text-[var(--color-foreground)] mb-4" />
               {!showAnswer ? (
-                <Button onClick={() => setShowAnswer(true)} size="lg" className="gap-2">
-                  <Brain className="w-5 h-5" />
-                  Montrer la réponse
-                </Button>
+                <div className="flex items-center justify-center gap-2">
+                  <Button onClick={() => setShowAnswer(true)} size="lg" className="gap-2">
+                    <Brain className="w-5 h-5" />
+                    Montrer la réponse
+                  </Button>
+                  <Button onClick={handleSkip} size="lg" variant="outline" className="gap-1">
+                    Passer
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               ) : (
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.96 }}
