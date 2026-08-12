@@ -149,17 +149,30 @@ export default function SpacedRepetition() {
     }
   }
 
+  // Fisher-Yates — cards otherwise come back in DB/insertion order (same order every session).
+  const shuffle = (arr) => {
+    const out = [...arr]
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[out[i], out[j]] = [out[j], out[i]]
+    }
+    return out
+  }
+
   // Freeze the queue at session start so background mutate() can't drop or reorder cards mid-review.
   const startReviewWith = (cards) => {
     if (!cards.length) return
     sessionStartRef.current = Date.now()
-    setReviewQueue([...cards])
+    setReviewQueue(shuffle(cards))
     setIsReviewMode(true)
     setCurrentReviewIndex(0)
     setGradedCount(0)
     setShowAnswer(false)
   }
-  const startReview = () => startReviewWith(dueToday)
+  // ponytail: global "review everything mixed" entry removed for now — sessions are
+  // discipline-scoped only (startReviewWith(disciplineDue) below), avoids surfacing
+  // cards from chapters the user hasn't started yet. Revisit once there's a per-chapter
+  // progress concept to filter on instead of just removing the entry point.
 
   // Log the finished session as a completed quest in the task system (Planner/Timer).
   // Real elapsed minutes: task created with target = spent = elapsed → derived-completed.
@@ -302,17 +315,6 @@ export default function SpacedRepetition() {
                 Session de révision
               </CardTitle>
               <div className="flex items-center gap-3">
-                {currentReviewIndex > 0 && (
-                  // ponytail: re-grading a card you've navigated back to double-counts XP/gradedCount —
-                  // acceptable for now, add a "graded this session" set if it becomes an actual complaint.
-                  <button
-                    onClick={() => { setCurrentReviewIndex((prev) => prev - 1); setShowAnswer(false) }}
-                    aria-label="Carte précédente"
-                    className="w-7 h-7 flex items-center justify-center rounded-full text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-secondary)] transition-colors active:scale-90"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                )}
                 <span className="text-sm text-[var(--color-muted-foreground)]">
                   {currentReviewIndex + 1} / {reviewQueue.length}
                 </span>
@@ -344,16 +346,10 @@ export default function SpacedRepetition() {
             <div className="text-center py-6">
               <CodeText text={currentItem.front} className="text-xl font-semibold text-[var(--color-foreground)] mb-4" />
               {!showAnswer ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Button onClick={() => setShowAnswer(true)} size="lg" className="gap-2">
-                    <Brain className="w-5 h-5" />
-                    Montrer la réponse
-                  </Button>
-                  <Button onClick={handleSkip} size="lg" variant="outline" className="gap-1">
-                    Passer
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Button onClick={() => setShowAnswer(true)} size="lg" className="gap-2">
+                  <Brain className="w-5 h-5" />
+                  Montrer la réponse
+                </Button>
               ) : (
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.96 }}
@@ -389,6 +385,26 @@ export default function SpacedRepetition() {
                   </div>
                 </motion.div>
               )}
+            </div>
+            {/* Nav row — stays visible whether or not the answer is shown */}
+            <div className="flex items-center justify-center gap-2">
+              {currentReviewIndex > 0 && (
+                // ponytail: re-grading a card you've navigated back to double-counts XP/gradedCount —
+                // acceptable for now, add a "graded this session" set if it becomes an actual complaint.
+                <Button
+                  onClick={() => { setCurrentReviewIndex((prev) => prev - 1); setShowAnswer(false) }}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Précédent
+                </Button>
+              )}
+              <Button onClick={handleSkip} size="sm" variant="outline" className="gap-1">
+                Passer
+                <ChevronRight className="w-4 h-4" />
+              </Button>
             </div>
             <div className="flex items-center justify-center gap-4 text-xs text-[var(--color-muted-foreground)]">
               <span className="flex items-center gap-1">
@@ -464,12 +480,6 @@ export default function SpacedRepetition() {
               <Plus className="w-4 h-4" /> Ajouter
             </Button>
           </div>
-
-          {dueToday.length > 0 && (
-            <Button onClick={startReview} className="w-full gap-2" size="lg">
-              <Brain className="w-5 h-5" /> Tout réviser ({dueToday.length})
-            </Button>
-          )}
 
           {items.length === 0 ? (
             <Card className="glass border-0">
